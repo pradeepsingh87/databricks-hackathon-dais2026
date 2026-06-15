@@ -1,13 +1,23 @@
--- Convenience views consumed by the Streamlit app and the Genie space.
+-- Convenience views consumed by ad hoc SQL and Genie.
+-- Replace __CATALOG__ before execution.
 
-CREATE OR REPLACE VIEW gold.v_care_gap_by_state AS
+CREATE OR REPLACE VIEW __CATALOG__.gold.v_care_gap_by_state AS
 SELECT
   capability,
   state,
-  AVG(score)       AS avg_score,
-  AVG(confidence)  AS avg_confidence,
-  SUM(n_facilities) AS n_facilities,
-  SUM(CASE WHEN data_deficient THEN 1 ELSE 0 END) AS n_data_deficient_cells
-FROM gold.h3_care_score s
-JOIN silver.facility_claims f USING (h3_cell)
-GROUP BY capability, state;
+  score,
+  confidence,
+  n_facilities,
+  n_data_deficient_cells
+FROM __CATALOG__.gold.care_score_by_state;
+
+CREATE OR REPLACE VIEW __CATALOG__.gold.v_care_gap_by_district AS
+SELECT
+  capability,
+  state,
+  district,
+  score,
+  confidence,
+  n_facilities,
+  n_data_deficient_cells
+FROM __CATALOG__.gold.care_score_by_district;

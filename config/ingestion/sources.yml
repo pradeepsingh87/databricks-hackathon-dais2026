@@ -51,11 +51,11 @@ sources:
       - { source: latitude,              target: latitude,       cast: double }
       - { source: longitude,             target: longitude,      cast: double }
       - { source: description,           target: description,    cast: string, transforms: [trim] }
-      - { source: capability,            target: capability_raw, cast: string }
-      - { source: procedure,             target: procedure_raw,  cast: string }
-      - { source: equipment,             target: equipment_raw,  cast: string }
-      - { source: specialties,           target: specialties_raw,cast: string }
-      - { source: source_urls,           target: source_urls_raw,cast: string }
+      - { source: capability,            target: capability_raw, cast: array<string> }
+      - { source: procedure,             target: procedure_raw,  cast: array<string> }
+      - { source: equipment,             target: equipment_raw,  cast: array<string> }
+      - { source: specialties,           target: specialties_raw,cast: array<string> }
+      - { source: source_urls,           target: source_urls_raw,cast: array<string> }
       - { source: numberDoctors,         target: number_doctors, cast: int,    transforms: [digits_only] }
       - { source: capacity,              target: capacity,       cast: int,    transforms: [digits_only] }
       - { source: yearEstablished,       target: year_established, cast: int,  transforms: [digits_only, year_in_range_1800_2026] }

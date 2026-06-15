@@ -1,15 +1,15 @@
 -- Lakebase schema for user-state persistence.
--- Notes, overrides, and saved planning scenarios.
+-- Replace __CATALOG__ before execution.
 
-CREATE TABLE IF NOT EXISTS lakebase.scenarios (
+CREATE TABLE IF NOT EXISTS __CATALOG__.lakebase.scenarios (
   id          BIGINT GENERATED ALWAYS AS IDENTITY,
   user        STRING NOT NULL,
   name        STRING NOT NULL,
-  payload     STRING,           -- JSON: capability, geography, what-if adds
+  payload     STRING,
   created_at  TIMESTAMP NOT NULL
 ) USING DELTA;
 
-CREATE TABLE IF NOT EXISTS lakebase.overrides (
+CREATE TABLE IF NOT EXISTS __CATALOG__.lakebase.overrides (
   id           BIGINT GENERATED ALWAYS AS IDENTITY,
   user         STRING NOT NULL,
   facility_id  STRING NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS lakebase.overrides (
   created_at   TIMESTAMP NOT NULL
 ) USING DELTA;
 
-CREATE TABLE IF NOT EXISTS lakebase.shortlists (
+CREATE TABLE IF NOT EXISTS __CATALOG__.lakebase.shortlists (
   id           BIGINT GENERATED ALWAYS AS IDENTITY,
   user         STRING NOT NULL,
   scenario_id  BIGINT,

@@ -61,7 +61,11 @@ def run_expectations(
         for r in results
     ]
     log_df = spark.createDataFrame(
-        rows, "source string, layer string, expectation string, severity string, failed bigint, total bigint"
+        rows,
+        (
+            "source string, layer string, expectation string, severity string, "
+            "failed bigint, total bigint"
+        ),
     ).withColumn("checked_at", F.current_timestamp())
     log_df.write.mode("append").saveAsTable(log_table)
     return results

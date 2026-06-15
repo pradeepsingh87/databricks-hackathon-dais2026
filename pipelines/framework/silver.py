@@ -80,7 +80,14 @@ def _standardize(df: DataFrame, spark: SparkSession, source: Source) -> DataFram
                 .join(alias, F.lower(F.trim(F.col(rule["from"]))) == F.col("_alias"), "left")
                 .withColumn(
                     rule["to"],
-                    F.coalesce("canonical_state", F.col(rule["from"]) if rule.get("on_miss") == "keep_raw" else F.lit(None)),
+                    F.coalesce(
+                        "canonical_state",
+                        (
+                            F.col(rule["from"])
+                            if rule.get("on_miss") == "keep_raw"
+                            else F.lit(None)
+                        ),
+                    ),
                 )
                 .drop("_alias", "canonical_state")
             )
@@ -90,10 +97,16 @@ def _standardize(df: DataFrame, spark: SparkSession, source: Source) -> DataFram
             ref_df = (
                 spark.read.table(pin_table)
                 .groupBy("pincode")
-                .agg(F.first("district").alias("_district"), F.first("state").alias("_state_from_pin"))
+                .agg(
+                    F.first("district").alias("_district"),
+                    F.first("state").alias("_state_from_pin"),
+                )
             )
             tos = rule["to"] if isinstance(rule["to"], list) else [rule["to"]]
-            df = df.join(ref_df, df[rule["from"]] == ref_df["pincode"], "left").drop(ref_df["pincode"])
+            df = (
+                df.join(ref_df, df[rule["from"]] == ref_df["pincode"], "left")
+                .drop(ref_df["pincode"])
+            )
             if "district" in tos:
                 df = df.withColumnRenamed("_district", "district")
             else:
