@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.envrc
+
+# Databricks
+.databricks/
+*.dbc
+
+# Data
+data/raw/
+data/processed/
+*.parquet
+*.csv
+!data/sample/*.csv
+!data/sample/*.parquet
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Streamlit
+.streamlit/secrets.toml

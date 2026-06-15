@@ -1,0 +1,21 @@
+bundle:
+  name: care-gap-navigator
+
+include:
+  - config/resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog name
+    default: dais_hackathon_2026
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-f6607f85-16a2.cloud.databricks.com
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-f6607f85-16a2.cloud.databricks.com

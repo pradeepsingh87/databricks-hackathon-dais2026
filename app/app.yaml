@@ -1,0 +1,16 @@
+command: ["streamlit", "run", "main.py", "--server.port=8000", "--server.address=0.0.0.0"]
+
+# Populate these on the Databricks App resource (or in `.env` for local
+# `streamlit run`). Keep `DATABRICKS_TOKEN` blank in source control and set it
+# as a secret in the workspace.
+env:
+  - name: DATABRICKS_HOST
+    value: "https://dbc-f6607f85-16a2.cloud.databricks.com"
+  - name: DATABRICKS_TOKEN
+    value: ""
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: "5954d90879db71e9"
+  - name: APP_CATALOG
+    value: "dais_hackathon_2026"
+  - name: GENIE_SPACE_URL
+    value: ""

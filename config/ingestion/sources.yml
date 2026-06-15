@@ -1,0 +1,129 @@
+# Metadata-driven source registry.
+#
+# Each entry is a self-describing contract for one upstream table:
+#   - where it lives (source_catalog/schema/table)
+#   - where it lands (bronze_table — always written verbatim, plus audit cols)
+#   - which columns are JSON-encoded strings (parse_json_columns)
+#   - which columns get normalized in Silver (rename / cast / clean rules)
+#   - quality expectations the framework asserts and counts (expectations)
+#
+# The Bronze and Silver runners read this file and process every entry the
+# same way — adding a new source is a YAML edit, not new code.
+
+defaults:
+  source_catalog: psb_catalog
+  source_schema: virtue_foundation_dataset
+  target_catalog: dais_hackathon_2026
+  bronze_schema: bronze
+  silver_schema: silver
+  write_mode: overwrite          # 'overwrite' for hackathon, 'merge' for prod
+  add_audit_columns: true
+
+sources:
+
+  - name: facilities
+    description: 10,088 Indian healthcare facility records — the primary entity.
+    source_table: facilities
+    bronze_table: bronze_facilities_raw
+    silver_table: silver_facilities
+    primary_key: unique_id
+
+    # JSON-string columns that must be parsed into ARRAY<STRING> in Silver.
+    parse_json_columns:
+      - capability
+      - procedure
+      - equipment
+      - specialties
+      - source_urls
+      - source_types
+      - source_ids
+      - phone_numbers
+      - websites
+
+    # Column-level normalization. Each rule is a dict the Silver runner consumes.
+    columns:
+      - { source: unique_id,             target: facility_id,    cast: string, transforms: [trim] }
+      - { source: name,                  target: name,           cast: string, transforms: [trim, collapse_ws] }
+      - { source: address_stateOrRegion, target: state_raw,      cast: string, transforms: [trim] }
+      - { source: address_city,          target: city,           cast: string, transforms: [trim, title_case] }
+      - { source: address_zipOrPostcode, target: pincode,        cast: string, transforms: [trim, digits_only, left_6] }
+      - { source: address_country,       target: country,        cast: string, transforms: [trim] }
+      - { source: latitude,              target: latitude,       cast: double }
+      - { source: longitude,             target: longitude,      cast: double }
+      - { source: description,           target: description,    cast: string, transforms: [trim] }
+      - { source: capability,            target: capability_raw, cast: array<string> }
+      - { source: procedure,             target: procedure_raw,  cast: array<string> }
+      - { source: equipment,             target: equipment_raw,  cast: array<string> }
+      - { source: specialties,           target: specialties_raw,cast: array<string> }
+      - { source: source_urls,           target: source_urls_raw,cast: array<string> }
+      - { source: numberDoctors,         target: number_doctors, cast: int,    transforms: [digits_only] }
+      - { source: capacity,              target: capacity,       cast: int,    transforms: [digits_only] }
+      - { source: yearEstablished,       target: year_established, cast: int,  transforms: [digits_only, year_in_range_1800_2026] }
+      - { source: officialWebsite,       target: official_website, cast: string, transforms: [trim] }
+      - { source: officialPhone,         target: official_phone,   cast: string, transforms: [trim] }
+
+    # Standardization joins resolved by reference data.
+    standardize:
+      - rule: state_lookup
+        from: state_raw
+        to: state
+        reference: india_state_alias
+        on_miss: keep_raw           # if no match, fall back to state_raw
+      - rule: pincode_geocode
+        from: pincode
+        to: [district, state_from_pincode]
+        reference: pincode_directory
+        on_miss: null
+
+    # Geospatial coercion — applied AFTER state_lookup so we can sanity-check.
+    geo:
+      lat_col: latitude
+      lng_col: longitude
+      india_bbox: { lat_min: 6.5, lat_max: 37.5, lng_min: 68.0, lng_max: 97.5 }
+      on_outside_bbox: flag_only      # don't drop; mark with a flag column
+      h3_resolutions: [6, 7, 8]
+
+    # Expectations — asserted and counted; failures land in the DQ log table.
+    expectations:
+      - { name: pk_not_null,         expr: "facility_id IS NOT NULL",                 severity: error }
+      - { name: pk_unique,           kind: unique, columns: [facility_id],            severity: warn }
+      - { name: name_present,        expr: "name IS NOT NULL AND length(name) > 0",   severity: warn }
+      - { name: lat_range,           expr: "latitude  BETWEEN -90  AND 90",           severity: error }
+      - { name: lng_range,           expr: "longitude BETWEEN -180 AND 180",          severity: error }
+      - { name: in_india_bbox,       expr: "latitude BETWEEN 6.5 AND 37.5 AND longitude BETWEEN 68 AND 97.5", severity: warn }
+      - { name: pincode_6_digits,    expr: "pincode IS NULL OR length(pincode) = 6",  severity: warn }
+      - { name: has_some_evidence,   expr: "description IS NOT NULL OR capability_raw IS NOT NULL", severity: warn }
+
+
+  - name: pincode_directory
+    description: India Post pincode → district/state reference (165k rows).
+    source_table: india_post_pincode_directory
+    bronze_table: bronze_pincode_directory
+    silver_table: silver_pincode_directory
+    primary_key: null              # not unique on pincode (multi-office per pin)
+    columns:
+      - { source: pincode,    target: pincode,    cast: string, transforms: [left_6] }
+      - { source: district,   target: district,   cast: string, transforms: [trim, title_case] }
+      - { source: statename,  target: state,      cast: string, transforms: [trim, title_case] }
+      - { source: latitude,   target: latitude,   cast: double }
+      - { source: longitude,  target: longitude,  cast: double }
+      - { source: officename, target: office_name,cast: string, transforms: [trim] }
+    expectations:
+      - { name: pincode_present, expr: "pincode IS NOT NULL", severity: error }
+
+
+  - name: nfhs5
+    description: NFHS-5 district-level health indicators (706 districts, 120 cols).
+    source_table: nfhs_5_district_health_indicators
+    bronze_table: bronze_nfhs5_raw
+    silver_table: silver_nfhs5_district
+    primary_key: null              # composite of (state, district) — set if present
+    # We don't enumerate all 120 columns — passthrough_all preserves the wide shape
+    # for the Gold layer to pick from later.
+    passthrough_all: true
+    columns:
+      # Only the keys we need to standardize for joins to facilities go here.
+      - { source: state_ut,      target: state,    cast: string, transforms: [trim, title_case] }
+      - { source: district_name, target: district, cast: string, transforms: [trim, title_case] }
+    expectations:
+      - { name: district_present, expr: "district IS NOT NULL", severity: warn }
