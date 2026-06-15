@@ -11,10 +11,11 @@ import json
 
 import pandas as pd
 
+from pipelines.common.config import fq_schema
+
 from .sql_client import execute, query_df
 
-CATALOG = "dais_hackathon_2026"
-LAKEBASE = f"{CATALOG}.lakebase"
+LAKEBASE = fq_schema("lakebase")
 
 
 # ----- Overrides ---------------------------------------------------------

@@ -14,16 +14,17 @@ from __future__ import annotations
 
 import pandas as pd
 
+from pipelines.common.config import CAPABILITIES, fq_schema
+
 from .sql_client import query_df
 
-CATALOG = "dais_hackathon_2026"
-SILVER = f"{CATALOG}.silver"
-GOLD = f"{CATALOG}.gold"
+SILVER = fq_schema("silver")
+GOLD = fq_schema("gold")
 
 
 def list_capabilities() -> list[str]:
     """Drive the sidebar selector. Stay aligned with capability_taxonomy.yml."""
-    return ["icu", "maternity", "emergency", "oncology", "trauma", "nicu"]
+    return CAPABILITIES
 
 
 def list_states() -> list[str]:
@@ -72,7 +73,7 @@ def fetch_district_rollup(capability: str, state: str | None = None) -> pd.DataF
     if state:
         return query_df(
             f"""
-            SELECT state, district, score, confidence, n_facilities
+            SELECT state, district, score, confidence, n_facilities, n_data_deficient_cells
             FROM {GOLD}.care_score_by_district
             WHERE capability = ? AND state = ?
             ORDER BY score ASC
@@ -81,7 +82,7 @@ def fetch_district_rollup(capability: str, state: str | None = None) -> pd.DataF
         )
     return query_df(
         f"""
-        SELECT state, district, score, confidence, n_facilities
+        SELECT state, district, score, confidence, n_facilities, n_data_deficient_cells
         FROM {GOLD}.care_score_by_district
         WHERE capability = ?
         ORDER BY score ASC
@@ -90,18 +91,19 @@ def fetch_district_rollup(capability: str, state: str | None = None) -> pd.DataF
     )
 
 
-def fetch_facilities_in_cell(h3_cell: str, capability: str) -> pd.DataFrame:
+def fetch_facilities_in_cell(h3_cell: str, capability: str, resolution: int = 7) -> pd.DataFrame:
     """Facilities backing one H3 aggregate, with citations.
 
     Reads from silver_facility_capability_claims if it exists (the planned
     table from gap #1); otherwise falls back to a coarser silver_facilities
     listing so the drill-down still renders.
     """
+    h3_col = f"h3_{resolution if resolution in {6, 7, 8} else 7}"
     df = query_df(
         f"""
-        SELECT facility_id, name, state, city, evidence_strength, citations
+        SELECT facility_id, name, state, district, city, evidence_strength, citations
         FROM {SILVER}.silver_facility_capability_claims
-        WHERE h3_7 = ? AND capability = ?
+        WHERE {h3_col} = ? AND capability = ?
         ORDER BY CASE evidence_strength
             WHEN 'strong' THEN 1 WHEN 'partial' THEN 2 WHEN 'suspicious' THEN 3 ELSE 4 END
         """,
@@ -112,11 +114,11 @@ def fetch_facilities_in_cell(h3_cell: str, capability: str) -> pd.DataFrame:
     # Fallback while claim extraction isn't deployed yet.
     return query_df(
         f"""
-        SELECT facility_id, name, state, city,
+        SELECT facility_id, name, state, district, city,
                CAST(NULL AS STRING) AS evidence_strength,
                description AS citations
         FROM {SILVER}.silver_facilities
-        WHERE h3_7 = ?
+        WHERE {h3_col} = ?
         LIMIT 200
         """,
         (h3_cell,),
@@ -124,21 +126,39 @@ def fetch_facilities_in_cell(h3_cell: str, capability: str) -> pd.DataFrame:
 
 
 def fetch_facilities_in_region(
-    capability: str,  # noqa: ARG001 — reserved for join with claims once Gold lands
+    capability: str,
     state: str,
     district: str | None = None,
 ) -> pd.DataFrame:
-    where = "state = ?"
-    params: tuple = (state,)
+    where = "state = ? AND capability = ?"
+    params: tuple = (state, capability)
     if district:
         where += " AND district = ?"
-        params = (state, district)
-    return query_df(
+        params = (state, capability, district)
+    df = query_df(
         f"""
-        SELECT facility_id, name, state, city, district, latitude, longitude
-        FROM {SILVER}.silver_facilities
+        SELECT facility_id, name, state, district, city, evidence_strength, citations
+        FROM {SILVER}.silver_facility_capability_claims
         WHERE {where}
         LIMIT 500
         """,
         params,
+    )
+    if not df.empty:
+        return df
+    fallback_where = "state = ?"
+    fallback_params: tuple = (state,)
+    if district:
+        fallback_where += " AND district = ?"
+        fallback_params = (state, district)
+    return query_df(
+        f"""
+        SELECT facility_id, name, state, city, district,
+               CAST(NULL AS STRING) AS evidence_strength,
+               description AS citations
+        FROM {SILVER}.silver_facilities
+        WHERE {fallback_where}
+        LIMIT 500
+        """,
+        fallback_params,
     )

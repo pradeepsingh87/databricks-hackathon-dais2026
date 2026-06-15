@@ -47,3 +47,15 @@ if not df.empty:
 
     with st.expander("Underlying data", expanded=False):
         st.dataframe(df, use_container_width=True, hide_index=True)
+
+st.divider()
+st.subheader("Regional coverage summary")
+summary = (
+    gold.fetch_district_rollup(filters.capability, filters.state)
+    if filters.state
+    else gold.fetch_state_rollup(filters.capability)
+)
+if summary.empty:
+    st.caption("Coverage summary will appear after Gold tables are populated.")
+else:
+    st.dataframe(summary, use_container_width=True, hide_index=True)

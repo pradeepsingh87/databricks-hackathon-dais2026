@@ -12,7 +12,11 @@ resources:
           depends_on: [{ task_key: bronze_ingest_all }]
           notebook_task:
             notebook_path: ../../pipelines/silver/normalize_claims.py
-        - task_key: gold_trust_score
+        - task_key: silver_extract_capability_claims
           depends_on: [{ task_key: silver_normalize_all }]
+          notebook_task:
+            notebook_path: ../../pipelines/silver/extract_capability_claims.py
+        - task_key: gold_trust_score
+          depends_on: [{ task_key: silver_extract_capability_claims }]
           notebook_task:
             notebook_path: ../../pipelines/gold/trust_weighted_score.py

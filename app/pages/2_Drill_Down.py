@@ -28,7 +28,11 @@ if not filters.h3_cell and not filters.state:
 
 if filters.h3_cell:
     st.subheader(f"Cell {filters.h3_cell} · capability **{filters.capability}**")
-    df = gold.fetch_facilities_in_cell(filters.h3_cell, filters.capability)
+    df = gold.fetch_facilities_in_cell(
+        filters.h3_cell,
+        filters.capability,
+        resolution=filters.h3_resolution,
+    )
 else:
     st.subheader(f"State {filters.state} · capability **{filters.capability}**")
     df = gold.fetch_facilities_in_region(filters.capability, filters.state)
@@ -70,7 +74,7 @@ for _, row in df.iterrows():
                 else:
                     st.markdown(f"> {c}")
         else:
-            st.caption("No structured citations yet — claim extraction (gap #1) pending.")
+            st.caption("No structured citations are available for this facility.")
 
         with st.form(f"override-{row.get('facility_id')}"):
             note = st.text_area(
