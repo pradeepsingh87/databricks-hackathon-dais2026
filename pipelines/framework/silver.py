@@ -15,6 +15,34 @@ from .registry import Source, load_registry
 from .transforms import apply_transforms
 
 
+def _safe_cast(col, target_type: str):  # noqa: ANN001
+    """Cast without aborting on malformed numeric strings like 'NA'."""
+    normalized = F.trim(F.lower(col.cast("string")))
+    if target_type == "int":
+        valid = normalized.rlike(r"^-?\d+$")
+        within_int_range = valid & (F.length(F.regexp_replace(normalized, "^-", "")) <= 9)
+        return F.when(within_int_range, col.cast("int")).otherwise(F.lit(None).cast("int"))
+    if target_type == "double":
+        valid = normalized.rlike(r"^-?(\d+(\.\d+)?|\.\d+)$")
+        return F.when(valid, col.cast("double")).otherwise(F.lit(None).cast("double"))
+    return col.cast(target_type)
+
+
+def _ensure_state_alias_reference(spark: SparkSession, target_catalog: str) -> str:
+    from pathlib import Path
+
+    sql_path = (
+        Path(__file__).resolve().parents[2]
+        / "sql" / "reference" / "state_aliases.sql"
+    )
+    sql_text = sql_path.read_text(encoding="utf-8").replace("__CATALOG__", target_catalog)
+    for statement in sql_text.split(";"):
+        stmt = statement.strip()
+        if stmt:
+            spark.sql(stmt)
+    return f"{target_catalog}.bronze.state_alias_reference"
+
+
 def _parse_json_columns(df: DataFrame, cols: list[str]) -> DataFrame:
     """Convert JSON-encoded string columns to ARRAY<STRING>.
 
@@ -41,7 +69,7 @@ def _apply_column_rules(df: DataFrame, source: Source) -> DataFrame:
                 col = F.col(src_col)
                 if rule.transforms:
                     col = apply_transforms(col, rule.transforms)
-                out = out.withColumn(rule.target, col.cast(rule.cast))
+                out = out.withColumn(rule.target, _safe_cast(col, rule.cast))
                 if rule.target != src_col:
                     out = out.drop(src_col)
         return out
@@ -56,7 +84,7 @@ def _apply_column_rules(df: DataFrame, source: Source) -> DataFrame:
         col = F.col(rule.source)
         if rule.transforms:
             col = apply_transforms(col, rule.transforms)
-        selects.append(col.cast(rule.cast).alias(rule.target))
+        selects.append(_safe_cast(col, rule.cast).alias(rule.target))
     return df.select(*selects)
 
 
@@ -65,15 +93,10 @@ def _standardize(df: DataFrame, spark: SparkSession, source: Source) -> DataFram
     for rule in source.standardize:
         ref = rule["reference"]
         if ref == "india_state_alias":
-            from pathlib import Path
-
-            csv_path = (
-                Path(__file__).resolve().parents[2]
-                / "config" / "ingestion" / "state_aliases.csv"
-            )
-            alias = (
-                spark.read.option("header", True).csv(str(csv_path))
-                .select(F.lower(F.trim("alias")).alias("_alias"), "canonical_state")
+            alias_table = _ensure_state_alias_reference(spark, source.target_catalog)
+            alias = spark.read.table(alias_table).select(
+                F.lower(F.trim("alias")).alias("_alias"),
+                "canonical_state",
             )
             df = (
                 df.alias("d")

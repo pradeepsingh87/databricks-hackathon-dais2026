@@ -33,12 +33,14 @@ def digits_only(col: Column) -> Column:
 
 
 def left_6(col: Column) -> Column:
-    return F.expr(f"substring({col._jc.toString()}, 1, 6)")  # noqa: SLF001
+    return F.substring(col.cast("string"), 1, 6)
 
 
 def year_in_range_1800_2026(col: Column) -> Column:
     """Coerce to int, NULL out impossible years."""
-    y = col.cast("int")
+    normalized = F.trim(col.cast("string"))
+    valid_year = normalized.rlike(r"^\d{4}$")
+    y = F.when(valid_year, normalized.cast("int")).otherwise(None)
     return F.when((y >= 1800) & (y <= 2026), y).otherwise(None)
 
 
