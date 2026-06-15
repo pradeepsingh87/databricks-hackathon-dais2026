@@ -7,18 +7,15 @@ include:
 variables:
   catalog:
     description: Unity Catalog name
-    default: hackathon
-  schema:
-    description: Schema name
-    default: care_gap
+    default: dais_hackathon_2026
 
 targets:
   dev:
     mode: development
     default: true
     workspace:
-      host: ${var.workspace_host}
+      host: https://dbc-f6607f85-16a2.cloud.databricks.com
   prod:
     mode: production
     workspace:
-      host: ${var.workspace_host}
+      host: https://dbc-f6607f85-16a2.cloud.databricks.com

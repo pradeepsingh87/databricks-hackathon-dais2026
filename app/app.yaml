@@ -1,1 +1,10 @@
 command: ["streamlit", "run", "main.py", "--server.port=8000", "--server.address=0.0.0.0"]
+
+# Databricks Apps injects DATABRICKS_HOST and an OAuth token automatically.
+# We still surface a few app-specific settings via env vars; populate them on
+# the App resource (or in .env for local `streamlit run`).
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: "5954d90879db71e9"
+  - name: GENIE_SPACE_URL
+    value: ""
