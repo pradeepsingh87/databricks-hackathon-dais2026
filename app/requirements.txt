@@ -1,0 +1,9 @@
+streamlit>=1.32
+streamlit-keplergl>=0.3
+databricks-sdk>=0.30
+databricks-sql-connector>=3.0
+pandas>=2.1
+h3>=3.7
+keplergl>=0.3
+plotly>=5.20
+pydantic>=2.5

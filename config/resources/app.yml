@@ -1,0 +1,6 @@
+resources:
+  apps:
+    care_gap_navigator:
+      name: care-gap-navigator
+      description: "Trust-Weighted Care Gap Navigator (Track 2)"
+      source_code_path: ../../app

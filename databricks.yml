@@ -1,0 +1,24 @@
+bundle:
+  name: care-gap-navigator
+
+include:
+  - config/resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog name
+    default: hackathon
+  schema:
+    description: Schema name
+    default: care_gap
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: ${var.workspace_host}
+  prod:
+    mode: production
+    workspace:
+      host: ${var.workspace_host}
