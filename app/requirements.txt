@@ -7,3 +7,4 @@ h3>=3.7
 keplergl>=0.3
 plotly>=5.20
 pydantic>=2.5
+psycopg2-binary>=2.9
