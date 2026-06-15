@@ -1,0 +1,4 @@
+# Lakebase instance is provisioned manually (CLI v1.3.0 does not support
+# the databases resource type). Once provisioned, add connection details to
+# the 'lakebase' Databricks secret scope and re-enable sync_lakebase task.
+# See scripts/setup_uc.sh for provisioning instructions.

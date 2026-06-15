@@ -20,3 +20,25 @@ resources:
           depends_on: [{ task_key: silver_extract_capability_claims }]
           notebook_task:
             notebook_path: ../../pipelines/gold/trust_weighted_score.py
+        - task_key: sync_lakebase
+          depends_on: [{ task_key: gold_trust_score }]
+          notebook_task:
+            notebook_path: ../../pipelines/gold/sync_to_lakebase.py
+
+    lakebase_sync:
+      name: lakebase-sync
+      # Standalone job for quick iteration on the Gold → Lakebase sync step.
+      # Run independently with: databricks bundle run lakebase_sync
+      tasks:
+        - task_key: sync_lakebase
+          notebook_task:
+            notebook_path: ../../pipelines/gold/sync_to_lakebase.py
+
+    lakebase_sync:
+      name: lakebase-sync
+      # Standalone job for quick iteration on the Gold → Lakebase sync step.
+      # Run independently with: databricks bundle run lakebase_sync
+      tasks:
+        - task_key: sync_lakebase
+          notebook_task:
+            notebook_path: ../../pipelines/gold/sync_to_lakebase.py
