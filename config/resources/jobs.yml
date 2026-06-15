@@ -1,7 +1,7 @@
 resources:
   jobs:
     care_gap_etl:
-      name: care-gap-etl
+      name: ${var.app_prefix}-care-gap-etl
       # Each task is a thin entrypoint that delegates to the metadata-driven
       # framework. Adding a new source = editing config/ingestion/sources.yml.
       tasks:

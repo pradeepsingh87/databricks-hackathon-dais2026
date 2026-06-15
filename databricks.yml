@@ -1,4 +1,7 @@
 bundle:
+  # Stable bundle name is required (workspace state path depends on it).
+  # Per-developer namespacing happens at the Job/App resource level via
+  # ${var.app_prefix} — see config/resources/*.yml.
   name: care-gap-navigator
 
 include:
@@ -8,6 +11,9 @@ variables:
   catalog:
     description: Unity Catalog name
     default: dais_hackathon_2026
+  app_prefix:
+    description: Per-developer prefix for the deployed Job and App resources
+    default: pradeep
 
 targets:
   dev:

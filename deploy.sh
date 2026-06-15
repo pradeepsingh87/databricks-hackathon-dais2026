@@ -9,6 +9,13 @@ set -euo pipefail
 PROFILE="${DATABRICKS_PROFILE:-DEFAULT}"
 TARGET="${BUNDLE_TARGET:-dev}"
 
+# Per-developer namespace for the deployed Bundle, Job, and App. Stamped onto
+# the resource names via ${var.app_prefix} in databricks.yml so two
+# side-by-side deployments don't collide. Override with: APP_PREFIX=foo ./deploy.sh
+sanitize() { echo "$1" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9-' '-' | sed 's/^-*//; s/-*$//'; }
+APP_PREFIX="${APP_PREFIX:-$(sanitize "${USER:-pradeep}")}"
+echo "[deploy] app_prefix     : $APP_PREFIX"
+
 # Newer CLIs ship with refreshed signing keys for the Terraform binary
 # download that bundle deploy uses internally. Older CLIs hit
 # "openpgp: key expired". 0.260+ is known good.
@@ -43,13 +50,16 @@ fi
 
 echo
 echo "[deploy] Validating bundle ..."
-databricks --profile "$PROFILE" bundle validate --target "$TARGET"
+databricks --profile "$PROFILE" bundle validate --target "$TARGET" \
+  --var="app_prefix=${APP_PREFIX}"
 
 echo
 echo "[deploy] Deploying bundle to target '$TARGET' ..."
-databricks --profile "$PROFILE" bundle deploy --target "$TARGET"
+databricks --profile "$PROFILE" bundle deploy --target "$TARGET" \
+  --var="app_prefix=${APP_PREFIX}"
 
 echo
 echo "[deploy] Done."
+echo "[deploy] Resources deployed: ${APP_PREFIX}-care-gap-navigator, ${APP_PREFIX}-care-gap-etl"
 echo "[deploy] To run the ETL job:"
-echo "[deploy]   databricks --profile $PROFILE bundle run care_gap_etl --target $TARGET"
+echo "[deploy]   databricks --profile $PROFILE bundle run care_gap_etl --target $TARGET --var=app_prefix=${APP_PREFIX}"

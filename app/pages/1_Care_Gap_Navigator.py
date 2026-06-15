@@ -1,3 +1,15 @@
+"""Care Gap Navigator — H3 care-score grid with confidence-as-alpha.
+
+Layout (top-down):
+  1. Brand strip + page title
+  2. KPI strip — n_cells, n_facilities, avg score/confidence, evidence-state mix
+  3. Map (pydeck H3 layer) + legend
+  4. Disease-burden ribbon (NFHS-5 indicator from the active domain)
+  5. Cell picker — "use this cell for drill-down" hands off to Action Center
+  6. Regional rollup (state-grain or district-grain)
+  7. Diagnostics expander
+"""
+
 import sys
 from pathlib import Path
 
@@ -7,55 +19,183 @@ if str(_REPO_ROOT) not in sys.path:
 
 import streamlit as st  # noqa: E402
 
+from app.components import care_map, legend  # noqa: E402
 from app.components.filters import render_sidebar, set_selected_cell  # noqa: E402
-from app.components.kepler_map import render_h3_map  # noqa: E402
-from app.services import gold  # noqa: E402
+from app.services import brand, gold  # noqa: E402
 
-st.set_page_config(page_title="Map", page_icon="🗺️", layout="wide")
+st.set_page_config(
+    page_title=f"Care Gap Navigator · {brand.load_brand().name}",
+    page_icon="🗺️", layout="wide",
+)
+brand.render_header(subtitle="H3 supply/demand grid · trust-weighted")
 filters = render_sidebar()
 
-st.title("Care Gap Map")
-st.caption(
-    f"Capability: **{filters.capability}** · "
-    f"State: **{filters.state or 'All India'}** · "
-    f"H3 res: **{filters.h3_resolution}**"
+# ---- Header --------------------------------------------------------------
+st.markdown(
+    f"### Care Gap Navigator"
+    f"<span style='font-size:13px;color:var(--brand-muted);margin-left:10px;'>"
+    f"capability <b>{filters.capability}</b> · state "
+    f"<b>{filters.state or 'All India'}</b> · H3 <b>{filters.h3_resolution}</b>"
+    f"{' · domain <b>' + filters.domain + '</b>' if filters.domain else ''}"
+    f"{' · min confidence <b>' + format(filters.confidence_min, '.2f') + '</b>' if filters.confidence_min > 0 else ''}"
+    f"</span>",
+    unsafe_allow_html=True,
 )
 
+# ---- KPIs ---------------------------------------------------------------
+kpis = gold.fetch_map_kpis(
+    capability=filters.capability,
+    resolution=filters.h3_resolution,
+    state=filters.state,
+)
+k1, k2, k3, k4, k5 = st.columns(5)
+k1.metric("Cells", f"{kpis['n_cells']:,}")
+k2.metric("Facilities", f"{kpis['n_facilities']:,}")
+k3.metric(
+    "Avg score",
+    "—" if kpis["avg_score"] is None else f"{kpis['avg_score']:.2f}",
+    help="0 = no care · 1 = well-served. Averaged over visible cells.",
+)
+k4.metric(
+    "Avg confidence",
+    "—" if kpis["avg_confidence"] is None else f"{kpis['avg_confidence']:.2f}",
+    help="How much we trust the score in this view (0..1).",
+)
+k5.metric(
+    "Data-deficient cells",
+    f"{kpis['n_data_deficient']:,}",
+    delta=f"{kpis['n_care_gap']:,} care-gap · {kpis['n_covered']:,} covered",
+    delta_color="off",
+)
+
+st.divider()
+
+# ---- Map ---------------------------------------------------------------
 df = gold.fetch_h3_scores(
     capability=filters.capability,
     resolution=filters.h3_resolution,
     state=filters.state,
 )
+if not df.empty and filters.confidence_min > 0:
+    df = df[df["confidence"].fillna(0) >= filters.confidence_min].reset_index(drop=True)
 
-render_h3_map(df, key=f"map-{filters.capability}-{filters.h3_resolution}-{filters.state or 'all'}")
+map_key = (
+    f"care-{filters.capability}-{filters.h3_resolution}-"
+    f"{filters.state or 'all'}-{filters.confidence_min}"
+)
+care_map.render(df, key=map_key)
+legend.render()
 
+# ---- Disease-burden ribbon (NFHS-5) ------------------------------------
+if filters.indicator:
+    st.markdown("&nbsp;")
+    st.markdown("**Disease-burden context — NFHS-5**")
+    burden = gold.fetch_nfhs5_indicator(filters.indicator, state=filters.state)
+    if burden.empty:
+        st.caption("No NFHS-5 rows for this indicator/region.")
+    else:
+        # Show top-3 worst and top-3 best — clinically actionable framing.
+        top = burden.dropna(subset=["value"]).head(3)
+        bot = burden.dropna(subset=["value"]).tail(3)[::-1]
+        c1, c2 = st.columns(2)
+        with c1:
+            st.caption(f"**Highest** · {filters.indicator}")
+            st.dataframe(top, hide_index=True, use_container_width=True)
+        with c2:
+            st.caption(f"**Lowest** · {filters.indicator}")
+            st.dataframe(bot, hide_index=True, use_container_width=True)
+
+# ---- Cell picker -------------------------------------------------------
 if not df.empty:
+    st.divider()
     st.subheader("Pick a cell to drill into")
-    st.caption("Choose an H3 cell from the table — the Drill-down page will use it.")
-    sorted_df = df.sort_values("score", ascending=True)
-    selected = st.selectbox(
-        "Cell",
-        options=sorted_df["h3_cell"].tolist(),
-        format_func=lambda h: (
-            f"{h} · score={float(sorted_df.loc[sorted_df.h3_cell == h, 'score'].iloc[0]):.2f}"
-            f" · n={int(sorted_df.loc[sorted_df.h3_cell == h, 'n_facilities'].iloc[0])}"
-        ),
-    )
-    if st.button("Use this cell for drill-down", type="primary"):
-        set_selected_cell(selected)
-        st.success(f"Selected {selected}. Open the **Drill-down** page in the sidebar.")
 
-    with st.expander("Underlying data", expanded=False):
-        st.dataframe(df, use_container_width=True, hide_index=True)
+    sort_options = {
+        "Worst care first (lowest score)":   ("score",      True),
+        "Best care first (highest score)":   ("score",      False),
+        "Most facilities":                    ("n_facilities", False),
+        "Lowest confidence":                  ("confidence", True),
+    }
+    sort_label = st.selectbox("Sort by", list(sort_options.keys()))
+    col, ascending = sort_options[sort_label]
+    sorted_df = df.sort_values(col, ascending=ascending).reset_index(drop=True)
 
+    pick_left, pick_right = st.columns([2, 1])
+    with pick_left:
+        selected = st.selectbox(
+            "Cell",
+            options=sorted_df["h3_cell"].tolist(),
+            format_func=lambda h: (
+                f"{h}  ·  score={float(sorted_df.loc[sorted_df.h3_cell == h, 'score'].iloc[0]):.2f}"
+                f"  ·  conf={float(sorted_df.loc[sorted_df.h3_cell == h, 'confidence'].iloc[0]):.2f}"
+                f"  ·  n={int(sorted_df.loc[sorted_df.h3_cell == h, 'n_facilities'].iloc[0])}"
+                f"  ·  {sorted_df.loc[sorted_df.h3_cell == h, 'evidence_state'].iloc[0]}"
+            ),
+        )
+    with pick_right:
+        st.markdown("&nbsp;")
+        if st.button("Open in Action Center →", type="primary", use_container_width=True):
+            set_selected_cell(selected)
+            st.switch_page("pages/3_Action_Center.py")
+
+    if filters.h3_cell == selected:
+        st.caption(f"Currently selected: `{filters.h3_cell}`")
+    elif filters.h3_cell:
+        st.caption(
+            f"Drill-down currently set to `{filters.h3_cell}` — pick a new one above to change it."
+        )
+
+# ---- Regional rollup (admin overlay) -----------------------------------
 st.divider()
 st.subheader("Regional coverage summary")
-summary = (
-    gold.fetch_district_rollup(filters.capability, filters.state)
-    if filters.state
-    else gold.fetch_state_rollup(filters.capability)
-)
-if summary.empty:
-    st.caption("Coverage summary will appear after Gold tables are populated.")
+overlay = filters.admin_overlay
+if overlay == "District" or (overlay == "None" and filters.state):
+    st.caption(f"District-level rollup for **{filters.state or 'all states'}**.")
+    summary = gold.fetch_district_rollup(filters.capability, filters.state)
+elif overlay == "State" or (overlay == "None" and not filters.state):
+    st.caption("State-level rollup. Pick a state in the sidebar to drop to district level.")
+    summary = gold.fetch_state_rollup(filters.capability)
 else:
-    st.dataframe(summary, use_container_width=True, hide_index=True)
+    summary = gold.fetch_state_rollup(filters.capability)
+
+if summary.empty:
+    st.info(
+        "Coverage summary will appear after the Gold ETL job populates "
+        "`gold.care_score_by_state` / `care_score_by_district`.",
+        icon="ℹ️",
+    )
+else:
+    st.dataframe(
+        summary,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "score":          st.column_config.ProgressColumn(
+                "score", min_value=0.0, max_value=1.0, format="%.2f",
+            ),
+            "confidence":     st.column_config.ProgressColumn(
+                "confidence", min_value=0.0, max_value=1.0, format="%.2f",
+            ),
+            "n_facilities":   st.column_config.NumberColumn("n facilities", format="%d"),
+            "n_data_deficient_cells": st.column_config.NumberColumn(
+                "data-deficient", format="%d",
+                help="How many H3 cells in this region we cannot trust either way.",
+            ),
+        },
+    )
+
+# ---- Diagnostics -------------------------------------------------------
+with st.expander("Diagnostics", expanded=False):
+    st.write(
+        f"`gold.h3_care_score` returned **{len(df)} rows**"
+        + (
+            f" (after confidence ≥ {filters.confidence_min:.2f} filter)"
+            if filters.confidence_min > 0 else ""
+        )
+        + "."
+    )
+    if not df.empty:
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    if err := st.session_state.get("_last_query_error"):
+        st.markdown("**Last query error**")
+        st.code(err, language="text")

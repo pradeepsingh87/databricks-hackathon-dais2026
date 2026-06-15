@@ -10,10 +10,12 @@ import json  # noqa: E402
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
+from app.components import facility_map  # noqa: E402
 from app.components.filters import render_sidebar  # noqa: E402
 from app.services import gold, lakebase  # noqa: E402
+from app.services.user import app_prefix, current_user  # noqa: E402
 
-st.set_page_config(page_title="Drill-down", page_icon="🔎", layout="wide")
+st.set_page_config(page_title=f"Drill-down · {app_prefix()}", page_icon="🔎", layout="wide")
 filters = render_sidebar()
 
 st.title("Drill-down: Facilities & Citations")
@@ -46,7 +48,23 @@ if df.empty:
     )
     st.stop()
 
-st.write(f"**{len(df)} facilities**")
+# ---- Location map -------------------------------------------------------
+st.markdown("### Where these facilities are")
+locations = gold.fetch_facility_locations(
+    capability=filters.capability,
+    state=filters.state if not filters.h3_cell else None,
+    h3_cell=filters.h3_cell,
+    resolution=filters.h3_resolution,
+)
+facility_map.render(
+    locations,
+    key=f"facmap-{filters.capability}-{filters.h3_cell or filters.state or 'all'}",
+)
+facility_map.render_legend()
+
+st.divider()
+st.markdown("### Facility records & citations")
+st.write(f"**{len(df)} facilities** in this view")
 
 for _, row in df.iterrows():
     title = f"**{row.get('name') or 'Unnamed'}**"
@@ -84,7 +102,7 @@ for _, row in df.iterrows():
             )
             if st.form_submit_button("Save override"):
                 ok = lakebase.add_override(
-                    user="demo",  # TODO: replace with Databricks Apps user header
+                    user=current_user(),
                     facility_id=row.get("facility_id"),
                     capability=filters.capability,
                     note=note,

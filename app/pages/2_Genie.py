@@ -11,8 +11,9 @@ import streamlit as st  # noqa: E402
 import streamlit.components.v1 as components  # noqa: E402
 
 from app.components.filters import render_sidebar  # noqa: E402
+from app.services.user import app_prefix  # noqa: E402
 
-st.set_page_config(page_title="Genie", page_icon="🧞", layout="wide")
+st.set_page_config(page_title=f"Genie · {app_prefix()}", page_icon="🧞", layout="wide")
 filters = render_sidebar()
 
 st.title("Ask Genie")

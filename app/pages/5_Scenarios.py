@@ -9,16 +9,18 @@ import json  # noqa: E402
 
 import streamlit as st  # noqa: E402
 
+from app.components import facility_map  # noqa: E402
 from app.components.filters import render_sidebar  # noqa: E402
-from app.services import lakebase  # noqa: E402
+from app.services import gold, lakebase  # noqa: E402
+from app.services.user import app_prefix, current_user  # noqa: E402
 
-st.set_page_config(page_title="Scenarios", page_icon="📋", layout="wide")
+st.set_page_config(page_title=f"Scenarios · {app_prefix()}", page_icon="📋", layout="wide")
 filters = render_sidebar()
 
 st.title("Planning Scenarios")
-st.caption("Save what-if allocations and overrides for NGO coordination.")
+st.caption(f"Save what-if allocations and overrides — signed in as **{current_user()}**.")
 
-USER = "demo"  # TODO: replace with Databricks Apps end-user header
+USER = current_user()
 
 # ---- Saved scenarios ------------------------------------------------------
 st.subheader("Saved scenarios")
@@ -34,9 +36,33 @@ else:
     )
     payload_str = saved.loc[saved.id == pick, "payload"].iloc[0]
     try:
-        st.json(json.loads(payload_str) if isinstance(payload_str, str) else payload_str)
+        payload = json.loads(payload_str) if isinstance(payload_str, str) else payload_str
     except Exception:  # noqa: BLE001
-        st.code(str(payload_str))
+        payload = None
+
+    payload_col, map_col = st.columns([1, 1])
+    with payload_col:
+        if payload is not None:
+            st.json(payload)
+        else:
+            st.code(str(payload_str))
+
+    with map_col:
+        # Replay the saved filter set as a small location preview so the
+        # planner can see *where* the scenario applies, not just abstract
+        # filter chips.
+        sf = (payload or {}).get("filters") or {}
+        cap = sf.get("capability") or filters.capability
+        scenario_locations = gold.fetch_facility_locations(
+            capability=cap,
+            state=sf.get("state") if not sf.get("h3_cell") else None,
+            h3_cell=sf.get("h3_cell"),
+            resolution=sf.get("h3_resolution") or 7,
+            limit=500,
+        )
+        st.caption(f"Locations in scope · capability **{cap}**")
+        facility_map.render(scenario_locations, height=320, key=f"scn-map-{pick}")
+        facility_map.render_legend()
 
 st.divider()
 

@@ -1,8 +1,10 @@
 """Persistence for user actions: overrides, scenarios.
 
-Backed by `dais_hackathon_2026.lakebase.*` Delta tables (DDL in
-sql/lakebase/schema.sql). All writers return bool so pages can show a clean
-success/failure UX without try/except scattered around.
+Backed by `<catalog>.lakebase.*` Delta tables (DDL in sql/lakebase/schema.sql).
+All writers return bool so pages can show a clean success/failure UX without
+try/except scattered around.
+
+Note: the column is `user_name` (not `user`); `user` is reserved in Spark SQL.
 """
 
 from __future__ import annotations
@@ -24,7 +26,8 @@ def add_override(user: str, facility_id: str, capability: str, note: str) -> boo
     if not note or not note.strip():
         return False
     return execute(
-        f"INSERT INTO {LAKEBASE}.overrides (user, facility_id, capability, note, created_at) "
+        f"INSERT INTO {LAKEBASE}.overrides "
+        f"(user_name, facility_id, capability, note, created_at) "
         f"VALUES (?, ?, ?, ?, current_timestamp())",
         (user, facility_id, capability, note),
     )
@@ -33,12 +36,12 @@ def add_override(user: str, facility_id: str, capability: str, note: str) -> boo
 def list_overrides(user: str | None = None) -> pd.DataFrame:
     if user:
         return query_df(
-            f"SELECT id, user, facility_id, capability, note, created_at "
-            f"FROM {LAKEBASE}.overrides WHERE user = ? ORDER BY created_at DESC",
+            f"SELECT id, user_name, facility_id, capability, note, created_at "
+            f"FROM {LAKEBASE}.overrides WHERE user_name = ? ORDER BY created_at DESC",
             (user,),
         )
     return query_df(
-        f"SELECT id, user, facility_id, capability, note, created_at "
+        f"SELECT id, user_name, facility_id, capability, note, created_at "
         f"FROM {LAKEBASE}.overrides ORDER BY created_at DESC LIMIT 200"
     )
 
@@ -49,7 +52,7 @@ def save_scenario(user: str, name: str, payload: dict) -> bool:
     if not name or not name.strip():
         return False
     return execute(
-        f"INSERT INTO {LAKEBASE}.scenarios (user, name, payload, created_at) "
+        f"INSERT INTO {LAKEBASE}.scenarios (user_name, name, payload, created_at) "
         f"VALUES (?, ?, ?, current_timestamp())",
         (user, name, json.dumps(payload)),
     )
@@ -58,11 +61,11 @@ def save_scenario(user: str, name: str, payload: dict) -> bool:
 def list_scenarios(user: str | None = None) -> pd.DataFrame:
     if user:
         return query_df(
-            f"SELECT id, user, name, payload, created_at FROM {LAKEBASE}.scenarios "
-            f"WHERE user = ? ORDER BY created_at DESC",
+            f"SELECT id, user_name, name, payload, created_at FROM {LAKEBASE}.scenarios "
+            f"WHERE user_name = ? ORDER BY created_at DESC",
             (user,),
         )
     return query_df(
-        f"SELECT id, user, name, payload, created_at FROM {LAKEBASE}.scenarios "
+        f"SELECT id, user_name, name, payload, created_at FROM {LAKEBASE}.scenarios "
         f"ORDER BY created_at DESC LIMIT 200"
     )

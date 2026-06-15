@@ -14,3 +14,11 @@ env:
     value: "dais_hackathon_2026"
   - name: GENIE_SPACE_URL
     value: ""
+  # Per-deployment namespace shown in the page title and used as the default
+  # user_name when the Databricks Apps end-user header is missing. The bundle
+  # rewrites this to ${var.app_prefix} at deploy time.
+  - name: APP_PREFIX
+    value: "pradeep"
+  # Local-dev override for the user_name when no end-user header is present.
+  - name: APP_USER
+    value: ""

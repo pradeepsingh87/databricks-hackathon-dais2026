@@ -1,6 +1,11 @@
 resources:
   apps:
     care_gap_navigator:
-      name: care-gap-navigator
+      name: ${var.app_prefix}-care-gap-navigator
       description: "Trust-Weighted Care Gap Navigator (Track 2)"
-      source_code_path: ../../app
+      # source_code_path must be a workspace path that the bundle has uploaded
+      # files into. ${workspace.file_path} resolves at deploy time to
+      # /Workspace/Users/<deployer>/.bundle/<bundle.name>/<target>/files
+      # — i.e. the same location the bundle just synced the repo to. The /app
+      # suffix points at the Streamlit app directory (where app.yaml lives).
+      source_code_path: ${workspace.file_path}/app

@@ -1,5 +1,6 @@
 streamlit>=1.32
 streamlit-keplergl>=0.3
+pydeck>=0.9
 databricks-sdk>=0.30
 databricks-sql-connector>=3.0
 pandas>=2.1
