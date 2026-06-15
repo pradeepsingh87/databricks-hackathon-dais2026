@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-CATALOG = "hackathon"
-SCHEMA = "care_gap"
+CATALOG = "dais_hackathon_2026"
+SCHEMA = "gold"
 
 CAPABILITIES = ["icu", "maternity", "emergency", "oncology", "trauma", "nicu"]
 
