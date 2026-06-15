@@ -123,7 +123,7 @@ sources:
     passthrough_all: true
     columns:
       # Only the keys we need to standardize for joins to facilities go here.
-      - { source: state_name, target: state,    cast: string, transforms: [trim, title_case] }
-      - { source: district,   target: district, cast: string, transforms: [trim, title_case] }
+      - { source: state_ut,      target: state,    cast: string, transforms: [trim, title_case] }
+      - { source: district_name, target: district, cast: string, transforms: [trim, title_case] }
     expectations:
       - { name: district_present, expr: "district IS NOT NULL", severity: warn }

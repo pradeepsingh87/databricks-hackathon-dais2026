@@ -79,7 +79,7 @@ The runner consumes this entry. **No PySpark code needs to change** when a new s
    - cast to declared type
    - emit `NULL` if the column is missing upstream (schema-stable output)
 3. **`_standardize`** — resolve declared lookups:
-   - `india_state_alias` — left-join against [`config/ingestion/state_aliases.csv`](../config/ingestion/state_aliases.csv) to canonicalize 254 spellings to ~36 official states/UTs. `on_miss: keep_raw` preserves whatever was there if it's not a known alias.
+   - `india_state_alias` — materialize and join against [`sql/reference/state_aliases.sql`](../sql/reference/state_aliases.sql) to canonicalize 254 spellings to ~36 official states/UTs. `on_miss: keep_raw` preserves whatever was there if it's not a known alias.
    - `pincode_directory` — left-join against the silver pincode table to enrich every facility with `district` and `state_from_pincode` (a second source-of-truth for the state — disagreements are surfaced in Gold as a low-confidence signal).
 4. **`_apply_geo`** — add `in_india_bbox` flag (we **flag, not drop** — keeping the row makes the data deficiency visible to the planner) and H3 cell columns at resolutions 6, 7, 8.
 5. **Expectations** — every rule in the entry's `expectations:` block is evaluated and results land in `dais_hackathon_2026.bronze.dq_log` (one row per (source, expectation, run)).
@@ -146,7 +146,7 @@ Both notebooks are 10-line entrypoints that just call `bronze.run_all(spark)` / 
 ```
 config/ingestion/
   sources.yml            # the registry — declarative source contracts
-  state_aliases.csv      # alias → canonical state lookup
+  ../sql/reference/state_aliases.sql  # inline alias → canonical state lookup
 
 pipelines/framework/
   __init__.py
