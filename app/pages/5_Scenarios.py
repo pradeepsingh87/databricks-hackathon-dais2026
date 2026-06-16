@@ -100,11 +100,81 @@ with st.form("new-scenario"):
         else:
             st.error("Save failed — name required, or Lakebase tables not deployed.")
 
+# ---- Filter bookmarks (multi-team coordination) ------------------------
+# A bookmark is a JSON snapshot of the current filter set; teammates can
+# load one to land on the same view their colleague was looking at.
+st.divider()
+st.subheader("Filter bookmarks")
+st.caption("Save the current sidebar filter state. Share with teammates so they land on the same view.")
+
+bm_left, bm_right = st.columns([3, 2])
+with bm_left:
+    with st.form("new-bookmark"):
+        bm_name = st.text_input(
+            "Bookmark name",
+            placeholder="e.g. 'Bihar maternity — high desert risk'",
+        )
+        bm_shared = st.checkbox(
+            "Share with teammates", value=False,
+            help="When checked, this bookmark is visible to everyone in the workspace.",
+        )
+        if st.form_submit_button("Save bookmark", use_container_width=True):
+            ok = lakebase.save_bookmark(
+                USER, bm_name,
+                {
+                    "capability":    filters.capability,
+                    "state":         filters.state,
+                    "h3_resolution": filters.h3_resolution,
+                    "h3_cell":       filters.h3_cell,
+                    "indicator":     filters.indicator,
+                    "domain":        filters.domain,
+                },
+                shared=bm_shared,
+            )
+            if ok:
+                st.success(f"Saved bookmark '{bm_name}'.", icon="🔖")
+                st.rerun()
+            else:
+                st.error("Save failed — name required, or Lakebase not deployed.")
+
+with bm_right:
+    bookmarks = lakebase.list_bookmarks(USER, include_shared=True)
+    if bookmarks.empty:
+        st.caption("No bookmarks yet — create one to your left.")
+    else:
+        st.dataframe(
+            bookmarks[["name", "user_name", "shared", "created_at"]].head(8),
+            use_container_width=True, hide_index=True,
+            column_config={
+                "name":       st.column_config.TextColumn("name"),
+                "user_name":  st.column_config.TextColumn("by"),
+                "shared":     st.column_config.CheckboxColumn("shared", disabled=True),
+                "created_at": st.column_config.DatetimeColumn("when", format="MMM D, h:mma"),
+            },
+        )
+
+# ---- Root-cause categorisations (cross-team summary) -------------------
+st.divider()
+st.subheader("Recent root-cause tags (NACHC)")
+st.caption("All teammates' gap categorisations across capabilities. Filter via the sidebar.")
+gap_log = lakebase.list_gap_categorizations(
+    capability=filters.capability,
+    state=filters.state,
+)
+if gap_log.empty:
+    st.caption("No categorisations yet — tag a cell from the **Care Gap Navigator** or **Action Center**.")
+else:
+    st.dataframe(
+        gap_log[["created_at", "user_name", "category", "severity",
+                 "capability", "state", "district", "h3_cell", "note"]].head(20),
+        use_container_width=True, hide_index=True,
+    )
+
 # ---- Recent overrides -----------------------------------------------------
 st.divider()
 st.subheader("Recent overrides")
 ov = lakebase.list_overrides(USER)
 if ov.empty:
-    st.caption("No overrides yet. Add them from the **Drill-down** page.")
+    st.caption("No overrides yet. Add them from the **Action Center** page.")
 else:
     st.dataframe(ov, use_container_width=True, hide_index=True)

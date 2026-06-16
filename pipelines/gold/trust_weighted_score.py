@@ -138,4 +138,31 @@ district_rollup.write.mode("overwrite").option("mergeSchema", "true").saveAsTabl
     district_rollup_table
 )
 
-print(f"[gold] wrote {h3_score_table}, {state_rollup_table}, {district_rollup_table}")
+# ---- Snapshot history ----------------------------------------------------
+# Append-only log of district rollups so the Performance page can show a
+# real time-series instead of a synthetic projection. Each ETL run stamps a
+# fresh `score_run_id` (UUID) and a `snapshot_ts`. Cheap (~1 row per district
+# per capability per run) and Liquid-clustered for fast slice queries.
+score_history_table = f"{gold_schema}.score_history"
+
+snapshot = (
+    district_rollup
+    .withColumn("score_run_id", F.expr("uuid()"))
+    .withColumn("snapshot_ts", F.current_timestamp())
+    .select(
+        "score_run_id", "snapshot_ts",
+        "capability", "state", "district",
+        "score", "confidence", "n_facilities", "n_data_deficient_cells",
+    )
+)
+(
+    snapshot.write
+    .mode("append")
+    .option("mergeSchema", "true")
+    .saveAsTable(score_history_table)
+)
+
+print(
+    f"[gold] wrote {h3_score_table}, {state_rollup_table}, "
+    f"{district_rollup_table}, +1 snapshot to {score_history_table}"
+)

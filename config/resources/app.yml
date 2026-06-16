@@ -9,3 +9,26 @@ resources:
       # — i.e. the same location the bundle just synced the repo to. The /app
       # suffix points at the Streamlit app directory (where app.yaml lives).
       source_code_path: ${workspace.file_path}/app
+
+      # Declarative App↔Genie binding (apps.AppResourceGenieSpace).
+      # The June 2026 bundle schema lets us declare the App's permission on
+      # a Genie Space. Space *content* (tables, instructions, sample
+      # questions framed as User Skills) is still managed via the Genie
+      # API by scripts/setup_genie.sh — bundles can't yet author it.
+      #
+      # Bound name "genie" surfaces as DATABRICKS_GENIE_GENIE_SPACE_ID at
+      # runtime (and similar URL vars), which app/services/genie.py will
+      # pick up automatically when the env var is set.
+      resources:
+        - name: genie
+          description: "Care Gap Navigator Genie Space — answers planner questions over the Gold/Silver layers."
+          genie_space:
+            # Schema (apps.AppResourceGenieSpace) requires name + permission +
+            # space_id all *inside* the genie_space block. The outer `name`
+            # above is the App's binding label; this `name` is the Genie
+            # resource name surfaced as the env-var prefix at runtime.
+            name: care-gap-navigator
+            space_id: ${var.genie_space_id}
+            # CAN_RUN lets the app submit messages but not edit space contents,
+            # which is exactly the runtime permission we want.
+            permission: CAN_RUN

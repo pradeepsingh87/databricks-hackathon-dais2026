@@ -14,6 +14,15 @@ variables:
   app_prefix:
     description: Per-developer prefix for the deployed Job and App resources
     default: pradeep
+  genie_space_id:
+    description: |
+      ID of the Genie Space the App is bound to. The space content
+      (tables, instructions, sample questions framed as User Skills) is
+      managed via the Genie API in scripts/setup_genie.sh — the bundle
+      only declares the App's permission to invoke it. Today's bundle
+      schema (apps.AppResourceGenieSpace) only supports binding to an
+      existing space by ID; bundles do not yet author space content.
+    default: 01f16906f47611808dfc6c5061d816a1
 
 targets:
   dev:

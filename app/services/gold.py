@@ -1,13 +1,22 @@
-"""Read-side services backed by Gold (and Silver, until claim extraction lands).
+"""Read-side services backed by the canonical Gold contract.
+
+Canonical Gold model (per docs/gold_contract_decision.md):
+  - gold.h3_care_score               — score, confidence, evidence_state per (capability, h3 cell)
+  - gold.care_score_by_state         — state rollup of the above
+  - gold.care_score_by_district      — district rollup of the above
+
+Metric vocabulary used everywhere in the app:
+  - score (0..1)         · 0 = no verified care, 1 = well-served
+  - confidence (0..1)    · 0 = data-poor, 1 = strong evidence; drives map alpha
+  - evidence_state       · 'data_deficient' | 'care_gap' | 'covered'
+  - data_deficient       · TRUE when confidence is too low to trust the score
+
+We deliberately do NOT use 'gap_score' / 'desert_flag' / 'confidence_label'
+in this layer — those belong to the supplemental medical_desert_* tables and
+are not part of the canonical app contract.
 
 Every function returns a pandas DataFrame — empty if the underlying table
-isn't deployed yet, so pages can show their own empty-state.
-
-Tables this layer expects (target catalog: dais_hackathon_2026):
-- silver.silver_facilities         — already produced by the ingestion framework
-- gold.h3_care_score               — produced by Gold (planned)
-- gold.care_score_by_state         — produced by Gold (planned)
-- gold.care_score_by_district      — produced by Gold (planned)
+isn't deployed yet, so pages render their own empty-state UI.
 """
 
 from __future__ import annotations
@@ -192,6 +201,57 @@ def search_facilities(query: str, limit: int = 25) -> pd.DataFrame:
         LIMIT ?
         """,
         (pattern, pattern, pattern, pattern, limit),
+    )
+
+
+def fetch_score_history(
+    capability: str,
+    *,
+    state: str | None = None,
+    top_n_districts: int = 8,
+) -> pd.DataFrame:
+    """Real time-series of district scores from `gold.score_history`.
+
+    Returns up to `top_n_districts × n_snapshots` rows with columns
+    (snapshot_ts, state, district, score, confidence, n_facilities). Empty
+    DataFrame when fewer than 2 distinct snapshots exist — the Performance
+    page falls back to its synthetic projection in that case.
+    """
+    where = "capability = ?"
+    params: tuple = (capability,)
+    if state:
+        where += " AND state = ?"
+        params = (capability, state)
+
+    # Pre-flight: do we have enough history to be useful?
+    n_snaps = query_df(
+        f"SELECT COUNT(DISTINCT score_run_id) AS n FROM {GOLD}.score_history "
+        f"WHERE capability = ?",
+        (capability,),
+    )
+    if n_snaps.empty or int(n_snaps.iloc[0]["n"]) < 2:
+        return pd.DataFrame()
+
+    # Top-N most-current worst districts, then pull every snapshot for them.
+    return query_df(
+        f"""
+        WITH worst AS (
+          SELECT state, district
+          FROM {GOLD}.care_score_by_district
+          WHERE {where}
+          ORDER BY score ASC NULLS LAST
+          LIMIT {int(top_n_districts)}
+        )
+        SELECT h.snapshot_ts, h.state, h.district,
+               h.score, h.confidence, h.n_facilities
+        FROM {GOLD}.score_history h
+        JOIN worst w
+          ON  h.state = w.state
+          AND h.district = w.district
+        WHERE h.capability = ?
+        ORDER BY h.state, h.district, h.snapshot_ts
+        """,
+        params + (capability,),
     )
 
 

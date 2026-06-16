@@ -54,7 +54,10 @@ def _capability_choices() -> tuple[list[str], str | None]:
 def render_sidebar() -> Filters:
     st.sidebar.header("Filters")
 
-    # ---- Domain (top of the funnel) -----------------------------------
+    # ---- PRIMARY filters --------------------------------------------------
+    # Three controls 90% of users touch: domain, capability, state.
+    # Indicator is also surfaced here because it changes the disease-burden
+    # ribbon — small and high-leverage.
     domains = load_domains()
     domain_options = ["All capabilities"] + [d.id for d in domains]
     domain_labels = {d.id: f"{d.icon}  {d.name}" for d in domains}
@@ -68,13 +71,11 @@ def render_sidebar() -> Filters:
         help="Bundles a set of capabilities + NFHS-5 indicators relevant to one planning lens.",
     )
 
-    # ---- Capability (filtered by domain) ------------------------------
     caps, default_indicator = _capability_choices()
     if KEYS["capability"] not in st.session_state or st.session_state[KEYS["capability"]] not in caps:
         st.session_state[KEYS["capability"]] = caps[0]
     capability = st.sidebar.selectbox("Capability", caps, key=KEYS["capability"])
 
-    # ---- Geography ----------------------------------------------------
     states = gold.list_states()
     state_options = ["(All India)"] + states
     if KEYS["state"] not in st.session_state:
@@ -82,48 +83,12 @@ def render_sidebar() -> Filters:
     state = st.sidebar.selectbox("State", state_options, key=KEYS["state"])
     state_value = None if state == "(All India)" else state
 
-    # ---- H3 resolution ------------------------------------------------
-    if KEYS["h3_resolution"] not in st.session_state:
-        st.session_state[KEYS["h3_resolution"]] = 7
-    h3_resolution = st.sidebar.select_slider(
-        "H3 resolution",
-        options=[6, 7, 8],
-        key=KEYS["h3_resolution"],
-        help="6 ≈ 36 km cells (state view) · 7 ≈ 5 km (district) · 8 ≈ 0.7 km (city block)",
-    )
-
-    # ---- Confidence threshold ----------------------------------------
-    if KEYS["confidence_min"] not in st.session_state:
-        st.session_state[KEYS["confidence_min"]] = 0.0
-    confidence_min = st.sidebar.slider(
-        "Min confidence",
-        min_value=0.0, max_value=1.0, step=0.05,
-        key=KEYS["confidence_min"],
-        help="Hide cells whose evidence confidence is below this threshold. "
-             "Useful for stripping data-deficient cells out of the map.",
-    )
-
-    # ---- Admin-boundary overlay ---------------------------------------
-    if KEYS["admin_overlay"] not in st.session_state:
-        st.session_state[KEYS["admin_overlay"]] = "None"
-    admin_overlay = st.sidebar.radio(
-        "Admin overlay",
-        ADMIN_OVERLAYS,
-        key=KEYS["admin_overlay"],
-        horizontal=True,
-        help="Overlay administrative boundaries on top of the H3 grid for context.",
-    )
-
-    # ---- NFHS-5 indicator (optional, for the disease-burden ribbon) ---
     indicator_options = ["(none)"] + sorted({i.column for d in domains for i in d.indicators})
     if KEYS["indicator"] not in st.session_state:
         st.session_state[KEYS["indicator"]] = default_indicator or "(none)"
     elif default_indicator and st.session_state.get("_indicator_domain") != domain_choice:
-        # If the active domain just changed, snap the indicator to the
-        # domain's first indicator so the page reflects the new lens.
         st.session_state[KEYS["indicator"]] = default_indicator
     st.session_state["_indicator_domain"] = domain_choice
-
     indicator_choice = st.sidebar.selectbox(
         "Disease-burden indicator (NFHS-5)",
         indicator_options,
@@ -131,6 +96,38 @@ def render_sidebar() -> Filters:
         help="Pulls a district-level health indicator from NFHS-5 to contextualise supply.",
     )
     indicator_value = None if indicator_choice == "(none)" else indicator_choice
+
+    # ---- ADVANCED filters (collapsed) ------------------------------------
+    # Three controls most users never touch. Tucked behind an expander so the
+    # sidebar reads as a 4-row primary panel by default.
+    with st.sidebar.expander("Advanced", expanded=False):
+        if KEYS["h3_resolution"] not in st.session_state:
+            st.session_state[KEYS["h3_resolution"]] = 7
+        h3_resolution = st.select_slider(
+            "H3 resolution",
+            options=[6, 7, 8],
+            key=KEYS["h3_resolution"],
+            help="6 ≈ 36 km · 7 ≈ 5 km · 8 ≈ 0.7 km. Default is 7 (district grain).",
+        )
+
+        if KEYS["confidence_min"] not in st.session_state:
+            st.session_state[KEYS["confidence_min"]] = 0.0
+        confidence_min = st.slider(
+            "Min confidence",
+            min_value=0.0, max_value=1.0, step=0.05,
+            key=KEYS["confidence_min"],
+            help="Hide cells with confidence below this threshold.",
+        )
+
+        if KEYS["admin_overlay"] not in st.session_state:
+            st.session_state[KEYS["admin_overlay"]] = "None"
+        admin_overlay = st.radio(
+            "Admin overlay",
+            ADMIN_OVERLAYS,
+            key=KEYS["admin_overlay"],
+            horizontal=True,
+            help="Overlay administrative boundaries on top of the H3 grid.",
+        )
 
     if not states:
         st.sidebar.info(

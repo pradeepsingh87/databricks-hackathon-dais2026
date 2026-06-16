@@ -80,28 +80,142 @@ def colors() -> dict[str, str]:
 
 
 def inject_css() -> None:
-    """Push brand variables + global polish CSS into the page head."""
+    """Push brand variables + global polish CSS into the page head.
+
+    2026 polish pass — adds the corner-radius / shadow / elevated-card
+    treatments the brief calls out, plus a tightened type ramp so the app
+    reads as a clinical tool rather than a default Streamlit dashboard.
+    """
     import streamlit as st
 
     b = load_brand()
-    css = (
-        f"<style>{b.as_css_vars()}"
-        # Tighten Streamlit's default header padding so the brand strip sits
-        # closer to the top — matches the dashboard look.
-        "section.main > div.block-container{padding-top:1.2rem;}"
-        # Sidebar: subtle left border tinted with the brand primary.
-        "section[data-testid='stSidebar']{"
-        "border-right:1px solid rgba(13,111,122,0.15);"
-        "background:linear-gradient(180deg,#fbfdfd 0%,#f4f9fa 100%);}"
-        # Compact metric labels, dashboard-style.
-        "[data-testid='stMetricLabel']{font-size:12px;letter-spacing:0.02em;"
-        "text-transform:uppercase;color:var(--brand-muted);}"
-        "[data-testid='stMetricValue']{color:var(--brand-text);font-weight:600;}"
-        # Primary button: brand color with crisp focus ring.
-        "button[kind='primary']{background:var(--brand-primary)!important;"
-        "border-color:var(--brand-primary)!important;}"
-        "</style>"
-    )
+    # The CSS is intentionally a single string to keep the runtime CSS
+    # injection cheap (one st.markdown call). Grouped by intent below.
+    css = f"""
+    <style>
+    {b.as_css_vars()}
+
+    /* ── design tokens (2026) ────────────────────────────────────────── */
+    :root {{
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.06);
+      --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
+      --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.05);
+      --border-soft: rgba(15, 23, 42, 0.07);
+    }}
+
+    /* ── page chrome ─────────────────────────────────────────────────── */
+    section.main > div.block-container {{
+      padding-top: 1.2rem;
+      padding-bottom: 2.4rem;
+      max-width: 1320px;
+    }}
+
+    /* Sidebar: subtle gradient + brand-tinted right border */
+    section[data-testid='stSidebar'] {{
+      border-right: 1px solid var(--border-soft);
+      background: linear-gradient(180deg, #fbfdfd 0%, #f4f9fa 100%);
+    }}
+    section[data-testid='stSidebar'] [data-testid='stHeading'] h2 {{
+      font-size: 14px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--brand-muted);
+      font-weight: 600;
+    }}
+
+    /* ── metric KPI strip ────────────────────────────────────────────── */
+    [data-testid='stMetricLabel'] {{
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--brand-muted);
+    }}
+    [data-testid='stMetricValue'] {{
+      color: var(--brand-text);
+      font-weight: 600;
+    }}
+    [data-testid='stMetric'] {{
+      background: #fff;
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 120ms ease, transform 120ms ease;
+    }}
+    [data-testid='stMetric']:hover {{
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }}
+
+    /* ── containers (st.container(border=True)) ──────────────────────── */
+    div[data-testid='stVerticalBlockBorderWrapper'] {{
+      border-radius: var(--radius-md) !important;
+      border-color: var(--border-soft) !important;
+      box-shadow: var(--shadow-sm);
+      background: #ffffffcc;
+      backdrop-filter: blur(2px);
+    }}
+
+    /* ── inputs ──────────────────────────────────────────────────────── */
+    [data-testid='stTextInput'] input,
+    [data-testid='stTextArea'] textarea,
+    [data-baseweb='select'] > div {{
+      border-radius: var(--radius-sm) !important;
+      border-color: var(--border-soft) !important;
+    }}
+    [data-testid='stTextInput'] input:focus,
+    [data-testid='stTextArea'] textarea:focus {{
+      border-color: var(--brand-primary) !important;
+      box-shadow: 0 0 0 3px rgba(13, 111, 122, 0.12) !important;
+    }}
+
+    /* ── buttons ─────────────────────────────────────────────────────── */
+    button[kind='primary'] {{
+      background: var(--brand-primary) !important;
+      border-color: var(--brand-primary) !important;
+      border-radius: var(--radius-sm) !important;
+      box-shadow: var(--shadow-sm);
+      transition: filter 120ms ease, box-shadow 120ms ease;
+    }}
+    button[kind='primary']:hover {{
+      filter: brightness(1.08);
+      box-shadow: var(--shadow-md);
+    }}
+    button[kind='secondary'] {{
+      border-radius: var(--radius-sm) !important;
+      border-color: var(--border-soft) !important;
+    }}
+
+    /* ── tables ──────────────────────────────────────────────────────── */
+    [data-testid='stDataFrame'] {{
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-soft);
+    }}
+
+    /* ── chat (Genie page) ───────────────────────────────────────────── */
+    [data-testid='stChatMessage'] {{
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 8px;
+    }}
+
+    /* ── pydeck map gets a soft outer shadow so it lifts off the page ── */
+    [data-testid='stDeckGlJsonChart'] {{
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-soft);
+    }}
+
+    /* ── divider tightening ──────────────────────────────────────────── */
+    hr {{ margin: 1.4rem 0 !important; border-color: var(--border-soft); }}
+    </style>
+    """
     st.markdown(css, unsafe_allow_html=True)
 
 

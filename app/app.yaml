@@ -1,29 +1,43 @@
 command: ["streamlit", "run", "main.py", "--server.port=8000", "--server.address=0.0.0.0"]
 
-# Populate these on the Databricks App resource (or in `.env` for local
-# `streamlit run`). Keep `DATABRICKS_TOKEN` blank in source control and set it
-# as a secret in the workspace.
+# Env values populated below are sensible defaults for THIS workspace. For
+# any other workspace, override these on the deployed App resource via the
+# Databricks UI (Apps → Settings → Environment variables) or via bundle
+# variables. The runtime injects DATABRICKS_HOST + an OAuth token
+# automatically when the App is deployed; the values here only matter for
+# `streamlit run` local development.
 env:
+  # ---- Workspace identity ------------------------------------------------
+  # Databricks Apps injects DATABRICKS_HOST automatically at runtime; the
+  # value here is the local-dev fallback. Token MUST stay blank in source —
+  # populate it in your local .env (see config/.env.example) or a workspace
+  # secret reference.
   - name: DATABRICKS_HOST
     value: "https://dbc-f6607f85-16a2.cloud.databricks.com"
   - name: DATABRICKS_TOKEN
     value: ""
   - name: DATABRICKS_WAREHOUSE_ID
     value: "5954d90879db71e9"
+
+  # ---- Catalog (single source of truth across pipelines + app) -----------
+  # APP_CATALOG cascades through pipelines/common/config.py::get_catalog()
+  # so every layer sees the same target. UC_CATALOG is honored too for
+  # backwards compatibility; both default to dais_hackathon_2026.
   - name: APP_CATALOG
     value: "dais_hackathon_2026"
-  # Genie space provisioned by scripts/setup_genie.sh — points at the
-  # 'Care Gap Navigator' room registered against the Gold + Silver tables.
-  # The ID is what the API needs; the URL is just for reference.
+
+  # ---- Genie ------------------------------------------------------------
+  # Provision once via scripts/setup_genie.sh; copy the printed ID here.
   - name: GENIE_SPACE_ID
     value: "01f16906f47611808dfc6c5061d816a1"
   - name: GENIE_SPACE_URL
     value: "https://dbc-f6607f85-16a2.cloud.databricks.com/genie/rooms/01f16906f47611808dfc6c5061d816a1"
-  # Per-deployment namespace shown in the page title and used as the default
-  # user_name when the Databricks Apps end-user header is missing. The bundle
-  # rewrites this to ${var.app_prefix} at deploy time.
+
+  # ---- Per-deployment branding -----------------------------------------
+  # APP_PREFIX is rewritten by the bundle to ${var.app_prefix} at deploy
+  # time. APP_USER is the local-dev fallback when no end-user header is
+  # forwarded by Databricks Apps.
   - name: APP_PREFIX
     value: "pradeep"
-  # Local-dev override for the user_name when no end-user header is present.
   - name: APP_USER
     value: ""

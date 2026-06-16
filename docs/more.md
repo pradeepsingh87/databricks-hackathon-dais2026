@@ -1,70 +1,73 @@
-This logical architecture for the **Trust-Weighted Care Gap Navigator** leverages the Databricks Data Intelligence Platform to transform messy healthcare data into a reliable geospatial planning tool. 
+# Implementation diagram
 
-The design focuses on distinguishing actual medical deserts from regions with simple data deficiencies by calculating an **Evidence-Based Confidence Score** for every healthcare claim.
-
-### **logical_architecture.mermaid**
+End-to-end view of the Trust-Weighted Care Gap Navigator as built. Distinct
+from `logical_architecture.md` — that one explains the *why*; this one is a
+single-page Mermaid map of the actual files and table flow.
 
 ```mermaid
 graph TD
-    %% Data Source
-    RAW[(10k Indian Facility Records: CSV/JSON)] --> BRONZE
+    SRC[(psb_catalog.virtue_foundation_dataset<br/>3 tables)] --> BRONZE
 
-    %% Medallion Pipeline
-    subgraph "Geospatial Lakehouse (Medallion Architecture)"
-        BRONZE[<b>Bronze:</b> Raw Landing<br/>Delta Lake] --> SILVER
-        
-        subgraph "Mosaic Geospatial Processing"
-            SILVER[<b>Silver:</b> Cleansed & Standardized<br/>ST_GeomFromWKT / ST_Point] --> H3
-            H3[<b>H3 Indexing:</b> Spatial Tessellation<br/>Resolutions 9-11] --> AGG[Spatial Joins & Regional Aggregation]
-        end
-        
-        AGG --> GOLD[<b>Gold:</b> Trust-Weighted Care Gaps<br/>Confidence Scores + Descriptions]
+    subgraph "Lakehouse · medallion"
+      BRONZE[Bronze<br/>verbatim Delta copies] --> SILVER_CORE
+      SILVER_CORE[Silver · core<br/>silver_facilities · silver_pincode_directory · silver_nfhs5_district<br/>H3 6/7/8 via DBR built-in h3_longlatash3] --> SILVER_CLAIMS
+      SILVER_CORE --> SILVER_GEO
+      SILVER_CLAIMS[silver_facility_capability_claims<br/>per-(facility, capability) trust + citations]
+      SILVER_GEO[silver_facilities_geo<br/>H3 9/10/11 + NFHS-5 demand attached]
+      SILVER_CLAIMS --> GOLD
+      SILVER_GEO --> GOLD_OPT
+      GOLD[Gold · canonical<br/>h3_care_score · care_score_by_state · care_score_by_district]
+      GOLD_OPT[Gold · supplemental<br/>medical_desert_h3 · medical_desert_districts]
     end
 
-    %% Semantic & Governance Layer
-    GOLD --> UC{Unity Catalog<br/>Governance & Metadata}
+    GOLD --> UC{Unity Catalog<br/>certified · domain tags · h3_index column tags}
+    GOLD_OPT --> UC
 
-    %% AI & Discovery
-    UC --> GENIE[<b>Databricks Genie Space</b><br/>Natural Language Discovery]
-    UC --> APP[<b>Databricks App</b><br/>Web Interface / Planner Portal]
+    UC --> APP
+    UC --> GENIE
+    UC --> CATALOG_BROWSE[Catalog Explorer<br/>Genie One mobile]
 
-    %% User Interaction & Map
-    subgraph "Planner Workflow Interface"
-        APP --> MAP[<b>Kepler.gl / Mosaic View</b><br/>Hexagonal Care Density Map]
-        APP --> DRILL[<b>Evidence Drill-Down</b><br/>Facility Citations & Claims]
-        DRILL --> ACTION[<b>User Actions</b><br/>Overrides, Notes, Scenarios]
+    subgraph "App · Streamlit on Databricks Apps"
+      APP[main.py · Executive Command Center]
+      APP --> P1[Care Gap Navigator<br/>pydeck H3HexagonLayer<br/>color=score, alpha=confidence]
+      APP --> P3[Action Center<br/>citations · NACHC root-cause panel<br/>override notes]
+      APP --> P4[Performance<br/>district risk stratification]
+      APP --> P5[Scenarios<br/>filter bookmarks · scenario log]
+      APP --> P2[Genie · inline chat]
     end
 
-    %% State Persistence
-    ACTION <--> LB[(<b>Lakebase Postgres</b><br/>State & Scenario Persistence)]
+    P2 --> GENIE[Genie Space<br/>10 tables · User Skills as sample questions]
 
-    %% Users
-    USER((NGO Coordinator /<br/>Healthcare Planner)) --> GENIE
-    USER --> APP
+    P1 -. cell selected .-> P3
+    P3 -. NACHC tag .-> LB
+    P3 -. override note .-> LB
+    P5 -. bookmark / scenario .-> LB
+    LB[(Lakebase<br/>scenarios · overrides<br/>gap_categorizations · bookmarks)]
 
-    %% Styling
-    style UC fill:#f1f1f1,stroke:#333,stroke-dasharray: 5 5
-    style GOLD fill:#f96,stroke:#333,stroke-width:2px
-    style APP fill:#bbf,stroke:#333,stroke-width:2px
-    style LB fill:#dfd,stroke:#333,stroke-width:2px
+    style GOLD fill:#0d6f7a,color:#fff,stroke:#0a5560
+    style GOLD_OPT fill:#f4a261,color:#1d3557,stroke:#d68146
+    style UC fill:#f1f5f9,stroke:#1d3557,stroke-dasharray:5 5
+    style LB fill:#dfd,stroke:#1d3557
+    style APP fill:#bbf,stroke:#1d3557
 ```
 
-### **Architectural Reasoning & Impact**
+## Stack realities (vs. older drafts)
 
-1.  **Scalable Geospatial Aggregation (Mosaic + H3):**
-    Instead of performing expensive "point-in-polygon" joins for every facility, the architecture uses the **Mosaic library** to tessellate coordinates into **H3 hexagonal grid cells**. This allows for near-instant aggregation of facility evidence across vast geographies like Indian states or districts.
+| Concern | What's actually used |
+| --- | --- |
+| H3 indexing | DBR built-in `h3_longlatash3` (not Mosaic library) |
+| Map rendering | pydeck (`H3HexagonLayer`, `ScatterplotLayer` clustering) on Carto Positron (not Kepler.gl) |
+| Persistence | Lakebase Delta tables: scenarios, overrides, gap_categorizations, bookmarks |
+| Trust signal alpha | `alpha = 50 + confidence × 160` per row, applied in pandas before pydeck render |
+| Data-deficient cells | Rendered neutral grey (`(170,174,180)`) — never red — so they don't read as "proven absent" |
 
-2.  **Trust-Weighting Engine (The "Gold" Layer):**
-    To satisfy the requirement of distinguishing "real gaps" from "data-poor regions," the Gold layer compares explicit **Capability Claims** (e.g., "ICU: Yes") against **Free-Text Evidence** found in the facility description. 
-    *   **High Confidence:** Claim matches text evidence.
-    *   **Low Confidence:** Claim made, but no supporting text or contradictory details found.
-    *   **Data Desert:** No claims or descriptions exist for the region.
+## Headline trust formula
 
-3.  **High-Scale Visualization (Kepler.gl):**
-    The web interface utilizes **Kepler.gl** integration via Mosaic to render millions of data points with high interactivity. Planners can use visual cues—such as hexagon transparency—to represent the **Confidence Score**, highlighting where evidence is weak or suspicious.
+Every gold cell carries:
 
-4.  **Natural Language Discovery (Genie):**
-    By exposing the Gold tables through a **Genie Space**, non-technical users can ask questions like *"Where are the highest-risk trauma gaps in Bihar with high confidence?"*. Genie translates these into SQL, drawing on the business logic already embedded in the Lakehouse.
+- `score ∈ [0,1]` — supply quality from claim weights and source-URL coverage
+- `confidence ∈ [0,1]` — evidence trust, drives map alpha
+- `evidence_state ∈ {data_deficient, care_gap, covered}`
+- `data_deficient ∈ BOOL` — TRUE when confidence is too low to trust the score
 
-5.  **Functional Decision Persistence (Lakebase):**
-    The app moves beyond a static dashboard by using **Lakebase Postgres** (or a Delta-backed persistence layer) to save user overrides, planner notes, and specific "What-If" resource allocation scenarios. This ensures that when a coordinator identifies a facility as suspicious, that knowledge is **persisted** for the rest of the organization.
+A high score with low confidence means *evidence is thin*, not that care is good — the map's transparency channel makes that visible immediately.

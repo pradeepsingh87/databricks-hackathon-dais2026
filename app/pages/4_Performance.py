@@ -96,58 +96,73 @@ st.dataframe(
     },
 )
 
-# ---- Projected gap-closure trend ---------------------------------------
+# ---- Gap-closure trend (real history if available, projection otherwise)
 st.divider()
-st.markdown("#### Projected gap-closure trajectory")
-st.caption(
-    "**Projected** — these trajectories are generated from the current Gold "
-    "scores using a deterministic monotonic improvement curve, so the page "
-    "stays demoable. Once the Gold ETL starts snapshotting `score_run_id` "
-    "rows, this chart will switch to *actual* historical movement."
-)
 
-MONTHS = 12
 WORST_N = 8
 
+# Try real history first — `gold.score_history` accumulates one row per
+# (capability, state, district, score_run_id). When ≥ 2 snapshots exist we
+# render real movement; otherwise fall back to the deterministic projection
+# below so the page stays demo-able even on a fresh workspace.
+history = gold.fetch_score_history(
+    filters.capability, state=filters.state, top_n_districts=WORST_N,
+)
 
-def _project_series(current_score: float, months: int = MONTHS) -> list[float]:
-    """Deterministic monotonic improvement.
-
-    A district scoring 0.20 today projects to (0.20, 0.23, 0.27, …, ≤0.85)
-    over `months` steps. The curve flattens as it approaches a ceiling.
-    No randomness — same inputs always produce the same chart, so demos
-    are reproducible.
-    """
-    if pd.isna(current_score):
-        return [float("nan")] * months
-    s = float(current_score)
-    ceiling = min(0.95, max(s + 0.4, 0.6))
-    out = []
-    for i in range(months):
-        # Geometric decay toward the ceiling.
-        out.append(round(s + (ceiling - s) * (1 - math.exp(-i / 4.0)), 3))
-    return out
-
-
-worst = ranked.dropna(subset=["score"]).head(WORST_N)
-trend_rows = []
-for _, r in worst.iterrows():
-    series = _project_series(float(r["score"]))
-    for m, v in enumerate(series):
-        trend_rows.append({"district": r["district"], "month": m, "score": v})
-trend_df = pd.DataFrame(trend_rows)
-
-if not trend_df.empty:
-    pivot = trend_df.pivot(index="month", columns="district", values="score")
-    st.line_chart(pivot, height=360, use_container_width=True)
+if not history.empty:
+    st.markdown("#### Gap-closure trajectory · actual history")
+    st.caption(
+        f"From `gold.score_history` ({history['snapshot_ts'].nunique()} runs · "
+        f"{history['district'].nunique()} districts). One line per district."
+    )
+    pivot_real = history.pivot_table(
+        index="snapshot_ts", columns="district", values="score", aggfunc="mean",
+    ).sort_index()
+    st.line_chart(pivot_real, height=360, use_container_width=True)
+    st.success(
+        "Real history. Each point is a Gold ETL run.",
+        icon="✅",
+    )
 else:
-    st.caption("Not enough districts with scores to chart.")
+    st.markdown("#### Projected gap-closure trajectory")
+    st.caption(
+        "**Projected** — generated from the current Gold scores using a "
+        "deterministic monotonic improvement curve. The page switches to "
+        "actual history once `gold.score_history` accumulates ≥ 2 snapshots "
+        "(every Gold ETL run appends one)."
+    )
+
+    MONTHS = 12
+
+    def _project_series(current_score: float, months: int = MONTHS) -> list[float]:
+        """Deterministic monotonic improvement (no randomness)."""
+        if pd.isna(current_score):
+            return [float("nan")] * months
+        s = float(current_score)
+        ceiling = min(0.95, max(s + 0.4, 0.6))
+        return [
+            round(s + (ceiling - s) * (1 - math.exp(-i / 4.0)), 3)
+            for i in range(months)
+        ]
+
+    worst = ranked.dropna(subset=["score"]).head(WORST_N)
+    trend_rows = []
+    for _, r in worst.iterrows():
+        for m, v in enumerate(_project_series(float(r["score"]))):
+            trend_rows.append({"district": r["district"], "month": m, "score": v})
+    trend_df = pd.DataFrame(trend_rows)
+
+    if not trend_df.empty:
+        pivot = trend_df.pivot(index="month", columns="district", values="score")
+        st.line_chart(pivot, height=360, use_container_width=True)
+    else:
+        st.caption("Not enough districts with scores to chart.")
 
 # ---- Honest banner ------------------------------------------------------
-st.info(
-    "💡 **Real history will replace this** when the Gold ETL job starts "
-    "writing one snapshot per run (we already have `score_run_id` and "
-    "`as_of_ts` slots reserved on the Gold tables — wiring them is the "
-    "next step on the gap list).",
-    icon="ℹ️",
-)
+if history.empty:
+    st.info(
+        "💡 **Real history replaces the projection** automatically once the "
+        "Gold ETL snapshots ≥ 2 runs. Each `bundle run care_gap_etl` appends "
+        "one row per (capability, district) to `gold.score_history`.",
+        icon="ℹ️",
+    )

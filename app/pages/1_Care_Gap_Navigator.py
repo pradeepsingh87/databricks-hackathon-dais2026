@@ -19,7 +19,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 import streamlit as st  # noqa: E402
 
-from app.components import care_map, legend  # noqa: E402
+from app.components import care_map, legend, root_cause_panel  # noqa: E402
 from app.components.filters import render_sidebar, set_selected_cell  # noqa: E402
 from app.services import brand, gold  # noqa: E402
 
@@ -41,6 +41,17 @@ st.markdown(
     f"</span>",
     unsafe_allow_html=True,
 )
+with st.expander("How to use this page", expanded=False):
+    st.markdown(
+        "1. Pick a **capability** and (optionally) a **state** in the sidebar.\n"
+        "2. Read the map two ways: **color** = score (red→green), "
+        "**transparency** = confidence (faded = data-poor).\n"
+        "3. Sort the picker below the map by *Worst care first* and click a cell.\n"
+        "4. Use **Open in Action Center** to see the citations behind that cell, "
+        "or scroll down to tag the gap as a Data / Service / Engagement gap.\n"
+        "\nCells in **grey** are *data-deficient* — we cannot trust the score "
+        "either way. Don't conflate them with proven-absent care."
+    )
 
 # ---- KPIs ---------------------------------------------------------------
 kpis = gold.fetch_map_kpis(
@@ -132,6 +143,13 @@ if not df.empty:
                 f"  ·  {sorted_df.loc[sorted_df.h3_cell == h, 'evidence_state'].iloc[0]}"
             ),
         )
+        # Cross-filter: writing the picked cell to session_state immediately
+        # makes downstream sections (facility list + root-cause panel) react
+        # without a separate "apply" step. Open in Action Center is still
+        # available for the cross-page handoff.
+        if selected and selected != filters.h3_cell:
+            set_selected_cell(selected)
+            filters.h3_cell = selected   # in-page reference, no rerun
     with pick_right:
         st.markdown("&nbsp;")
         if st.button("Open in Action Center →", type="primary", use_container_width=True):
@@ -144,6 +162,50 @@ if not df.empty:
         st.caption(
             f"Drill-down currently set to `{filters.h3_cell}` — pick a new one above to change it."
         )
+
+# ---- Cross-filtered facility list (clicked cell → live facility list) ----
+# Renders only when a cell is picked. The "click a hexagon → filter the
+# citation list" pattern from the brief, driven by st.session_state.
+if filters.h3_cell:
+    st.divider()
+    st.subheader(f"Facilities in cell `{filters.h3_cell}`")
+    st.caption(
+        "Cross-filtered live from the picked cell. Use the **Action Center** "
+        "page for the full citations + override workflow."
+    )
+    cell_facilities = gold.fetch_facilities_in_cell(
+        filters.h3_cell, filters.capability, resolution=filters.h3_resolution,
+    )
+    if cell_facilities.empty:
+        st.info(
+            "No facilities backing this cell. Either it's data-deficient "
+            "(no claims found) or the cell is genuinely empty.",
+            icon="ℹ️",
+        )
+    else:
+        st.dataframe(
+            cell_facilities[
+                [c for c in ["facility_id", "name", "city", "state", "evidence_strength"]
+                 if c in cell_facilities.columns]
+            ],
+            use_container_width=True, hide_index=True,
+        )
+
+# ---- NACHC Root Cause Analysis side-panel -------------------------------
+# Active whenever there's a non-trivial scope to categorise. Persists to
+# lakebase.gap_categorizations for multi-team coordination.
+if filters.h3_cell or filters.state:
+    st.divider()
+    root_cause_panel.render(
+        root_cause_panel.Selection(
+            capability=filters.capability,
+            state=filters.state,
+            district=None,           # the navigator doesn't pin a district yet
+            h3_cell=filters.h3_cell,
+        ),
+        location="cell" if filters.h3_cell else "state",
+        key_prefix="nav",
+    )
 
 # ---- Regional rollup (admin overlay) -----------------------------------
 st.divider()

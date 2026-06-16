@@ -77,18 +77,57 @@ def render(df: pd.DataFrame, height: int = 420, key: str = "facility-map") -> No
     plot["capacity_disp"] = plot["capacity"].fillna(0).astype(int)
     plot["doctors_disp"] = plot["number_doctors"].fillna(0).astype(int)
 
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=plot,
-        get_position="[longitude, latitude]",
-        get_fill_color="fill_color",
-        get_radius="radius",
-        radius_min_pixels=4,
-        radius_max_pixels=42,
-        pickable=True,
-        stroked=True,
-        get_line_color=[255, 255, 255, 220],   # white halo, dashboard-style
-        line_width_min_pixels=1,
+    # Clustering threshold: when the data spans >4° latitude (state-grain or
+    # broader), 500+ markers visually overload the map. Switch to an
+    # aggregated HexagonLayer that bins facilities into hex bins coloured by
+    # count — the dashboard "cluster markers" pattern. Below the threshold,
+    # individual markers are readable and clinically meaningful (planners
+    # can pick a specific hospital).
+    spread = float(plot["latitude"].astype(float).max()
+                   - plot["latitude"].astype(float).min())
+    use_clusters = spread >= 4.0 or len(plot) >= 500
+
+    layers = []
+    if use_clusters:
+        layers.append(
+            pdk.Layer(
+                "HexagonLayer",
+                data=plot,
+                get_position="[longitude, latitude]",
+                radius=8000,                    # ~8 km hex bins
+                elevation_scale=0,              # flat — no extrusion
+                pickable=True,
+                extruded=False,
+                opacity=0.65,
+                # Diverging-by-count colour ramp: pale to brand-primary.
+                color_range=[
+                    [220, 235, 232],
+                    [184, 220, 220],
+                    [140, 200, 198],
+                    [80, 165, 168],
+                    [40, 130, 138],
+                    [13, 111, 122],
+                ],
+                stroked=True,
+                line_width_min_pixels=1,
+                get_line_color=[255, 255, 255, 200],
+            )
+        )
+    layers.append(
+        pdk.Layer(
+            "ScatterplotLayer",
+            data=plot,
+            get_position="[longitude, latitude]",
+            get_fill_color="fill_color",
+            get_radius="radius",
+            radius_min_pixels=4 if not use_clusters else 2,
+            radius_max_pixels=42 if not use_clusters else 14,
+            opacity=1.0 if not use_clusters else 0.55,
+            pickable=True,
+            stroked=True,
+            get_line_color=[255, 255, 255, 220],
+            line_width_min_pixels=1,
+        )
     )
 
     tooltip = {
@@ -112,7 +151,7 @@ def render(df: pd.DataFrame, height: int = 420, key: str = "facility-map") -> No
     }
 
     deck = pdk.Deck(
-        layers=[layer],
+        layers=layers,
         initial_view_state=_initial_view(plot),
         map_provider="carto",
         map_style="light",

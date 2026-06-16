@@ -20,7 +20,7 @@ import json  # noqa: E402
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from app.components import facility_map  # noqa: E402
+from app.components import facility_map, root_cause_panel  # noqa: E402
 from app.components.filters import render_sidebar  # noqa: E402
 from app.services import brand, gold, lakebase  # noqa: E402
 from app.services.user import current_user  # noqa: E402
@@ -41,6 +41,18 @@ chip_html = (
     "</span>"
 )
 st.markdown(chip_html, unsafe_allow_html=True)
+with st.expander("How to use this page", expanded=False):
+    st.markdown(
+        "1. Each card shows one facility's claim for the selected capability.\n"
+        "2. The badge (✅ / 🟡 / 🚩 / ⚪) summarises the evidence we found.\n"
+        "3. Click a card to expand citations — the *exact text* from the "
+        "facility record that justifies the claim.\n"
+        "4. Use **Add note** to flag a claim, **Save scenario** at the bottom "
+        "to bookmark this view for teammates.\n"
+        "5. Use the **Root Cause Analysis** panel above the cards to "
+        "categorise the gap (Data / Service / Engagement) — visible to "
+        "everyone on your team."
+    )
 
 if not filters.h3_cell and not filters.state:
     st.info(
@@ -95,6 +107,20 @@ c1.metric("✅ Strong",     int(strength_counts.get("strong", 0)))
 c2.metric("🟡 Partial",    int(strength_counts.get("partial", 0)))
 c3.metric("🚩 Suspicious", int(strength_counts.get("suspicious", 0)))
 c4.metric("⚪ Unknown",    int(strength_counts.get("none", 0)))
+
+# ---- NACHC Root Cause Analysis side-panel ------------------------------
+# Sits between the trust-signal summary and the per-facility workflow so the
+# planner can categorise the gap *before* drilling into individual citations.
+st.divider()
+root_cause_panel.render(
+    root_cause_panel.Selection(
+        capability=filters.capability,
+        state=filters.state,
+        h3_cell=filters.h3_cell,
+    ),
+    location="cell" if filters.h3_cell else "state",
+    key_prefix="ac",
+)
 
 # ---- Facility cards ----------------------------------------------------
 st.divider()

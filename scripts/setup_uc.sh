@@ -59,13 +59,28 @@ CREATE TABLE IF NOT EXISTS $CATALOG.lakebase.overrides (
 ) USING DELTA
 "
 run_sql "
-CREATE TABLE IF NOT EXISTS $CATALOG.lakebase.shortlists (
-  id           BIGINT GENERATED ALWAYS AS IDENTITY,
-  user_name    STRING NOT NULL,
-  scenario_id  BIGINT,
-  facility_id  STRING NOT NULL,
-  rank         INT,
-  created_at   TIMESTAMP NOT NULL
+CREATE TABLE IF NOT EXISTS $CATALOG.lakebase.gap_categorizations (
+  id            BIGINT GENERATED ALWAYS AS IDENTITY,
+  user_name     STRING NOT NULL,
+  capability    STRING NOT NULL,
+  state         STRING,
+  district      STRING,
+  h3_cell       STRING,
+  category      STRING NOT NULL,
+  severity      STRING,
+  note          STRING,
+  created_at    TIMESTAMP NOT NULL
+) USING DELTA
+"
+
+run_sql "
+CREATE TABLE IF NOT EXISTS $CATALOG.lakebase.bookmarks (
+  id            BIGINT GENERATED ALWAYS AS IDENTITY,
+  user_name     STRING NOT NULL,
+  name          STRING NOT NULL,
+  filters_json  STRING,
+  shared        BOOLEAN,
+  created_at    TIMESTAMP NOT NULL
 ) USING DELTA
 "
 
