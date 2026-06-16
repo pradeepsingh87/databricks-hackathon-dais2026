@@ -1,11 +1,11 @@
-command: ["streamlit", "run", "Home.py", "--server.port=8000", "--server.address=0.0.0.0"]
+command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Env values populated below are sensible defaults for THIS workspace. For
 # any other workspace, override these on the deployed App resource via the
 # Databricks UI (Apps → Settings → Environment variables) or via bundle
 # variables. The runtime injects DATABRICKS_HOST + an OAuth token
 # automatically when the App is deployed; the values here only matter for
-# `streamlit run` local development.
+# `uvicorn main:app` local development.
 env:
   # ---- Workspace identity ------------------------------------------------
   # Databricks Apps injects DATABRICKS_HOST and an OAuth token for the app's
