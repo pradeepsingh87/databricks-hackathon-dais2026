@@ -111,6 +111,10 @@ def render(df: pd.DataFrame, height: int = 420, key: str = "facility-map") -> No
                 stroked=True,
                 line_width_min_pixels=1,
                 get_line_color=[255, 255, 255, 200],
+                # `id` lets deck.gl track this layer across reruns. Replaces
+                # the old `key=` on st.pydeck_chart, which the deployed
+                # Streamlit runtime rejects.
+                id=f"{key}-hex",
             )
         )
     layers.append(
@@ -127,6 +131,7 @@ def render(df: pd.DataFrame, height: int = 420, key: str = "facility-map") -> No
             stroked=True,
             get_line_color=[255, 255, 255, 220],
             line_width_min_pixels=1,
+            id=key,
         )
     )
 
@@ -156,11 +161,12 @@ def render(df: pd.DataFrame, height: int = 420, key: str = "facility-map") -> No
         map_provider="carto",
         map_style="light",
         tooltip=tooltip,
-        # Older Streamlit on the Apps runtime doesn't accept `height=` on
-        # st.pydeck_chart — set it on the deck object instead.
+        # Older Streamlit on the Apps runtime accepts neither `height=` nor
+        # `key=` on st.pydeck_chart. Height goes on the Deck object; `key`
+        # is forwarded to each Layer's `id` parameter above.
         height=height,
     )
-    st.pydeck_chart(deck, use_container_width=True, key=key)
+    st.pydeck_chart(deck, use_container_width=True)
 
 
 def render_legend() -> None:

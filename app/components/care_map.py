@@ -116,6 +116,11 @@ def render(df: pd.DataFrame, height: int = 560, key: str = "care-map") -> None:
         pickable=True,
         stroked=True,
         coverage=0.93,
+        # `id` lets pydeck/deck.gl track this layer across reruns — same role
+        # the old `key=` on st.pydeck_chart was meant to play. The deployed
+        # Streamlit runtime rejects `key=` on pydeck_chart, so we route the
+        # caller's identifier here instead.
+        id=key,
     )
 
     tooltip = {
@@ -147,9 +152,8 @@ def render(df: pd.DataFrame, height: int = 560, key: str = "care-map") -> None:
         map_style="light",
         tooltip=tooltip,
         # Older Streamlit builds (≤1.40 in the deployed Apps runtime) don't
-        # accept `height=` on st.pydeck_chart. Set it on the deck object
-        # itself instead — pydeck honours height via the Deck-level height
-        # property which is rendered into the JSON spec Streamlit forwards.
+        # accept `height=` or `key=` on st.pydeck_chart. Height goes on the
+        # Deck; `key` is forwarded to the Layer's `id` parameter above.
         height=height,
     )
-    st.pydeck_chart(deck, use_container_width=True, key=key)
+    st.pydeck_chart(deck, use_container_width=True)

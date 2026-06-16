@@ -11,12 +11,13 @@ sponsor: "Virtue Foundation"
 tagline: "Distinguishing real care gaps from data-poor regions across India."
 logo_url: ""
 
-# Clinical royal-blue + white palette. Confident healthcare blue, pure-white
-# canvas, deep-navy ink. Accent stays in the blue family rather than the old
-# amber so chrome reads as a single calm hue.
+# Pale blue chrome + near-black ink. Whisper-blue background reads as
+# clean medical surface; royal-blue stays as the action accent (buttons,
+# links, focus rings); ink is near-black navy so contrast against the
+# pale background is high (~13:1, well above WCAG AA).
 primary:    "#1e4fc2"
 secondary:  "#4a7ad9"
 accent:     "#1e4fc2"
-background: "#ffffff"
-text:       "#0f1e3d"
-muted:      "#6b7385"
+background: "#eef3fb"
+text:       "#0a1126"
+muted:      "#5b6478"
