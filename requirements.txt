@@ -1,0 +1,12 @@
+streamlit>=1.32
+pydeck>=0.9
+databricks-sdk>=0.30
+databricks-sql-connector>=3.0
+pandas>=2.1
+pyarrow>=14.0
+h3>=3.7
+plotly>=5.20
+pydantic>=2.5
+python-dotenv>=1.0
+PyYAML>=6.0
+requests>=2.31

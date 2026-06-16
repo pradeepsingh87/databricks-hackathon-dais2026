@@ -1,0 +1,63 @@
+# Capability → NFHS-5 demand indicator mapping.
+#
+# Each capability maps to ONE NFHS-5 column (the columns live on
+# silver.silver_nfhs5_district, attached to facilities through
+# silver.silver_facilities_geo by (state, district)).
+#
+# `direction` = how to read the indicator:
+#   - "low_means_high_demand"  : low NFHS-5 % means under-served → demand HIGH
+#                                (e.g. only 30 % institutional birth coverage
+#                                means the remaining 70 % go elsewhere → high
+#                                demand for maternity care)
+#   - "high_means_high_demand" : high NFHS-5 % means high disease prevalence
+#                                → demand HIGH (e.g. anaemia rate 60 % means
+#                                lots of people who need oncology workup)
+#
+# The Gold scorer normalises the indicator to a 0..1 demand score using these
+# rules, then divides verified supply by demand to produce gap_score.
+
+capabilities:
+  maternity:
+    indicator: institutional_birth_5y_pct
+    direction: low_means_high_demand
+    rationale: >
+      Low institutional-birth coverage means more births happening at home
+      where care is unavailable — so demand for maternity infrastructure is
+      high in those districts.
+
+  nicu:
+    indicator: child_u5_who_are_stunted_height_for_age_18_pct
+    direction: high_means_high_demand
+    rationale: >
+      High under-5 stunting is a systemic child-health signal; districts
+      with high stunting need NICU capacity for pre-term and underweight
+      neonates. Imperfect proxy but the best district-grain signal NFHS-5
+      offers for neonatal demand.
+
+  emergency:
+    indicator: hh_member_covered_health_insurance_pct
+    direction: low_means_high_demand
+    rationale: >
+      Low insurance coverage → patients defer care until emergencies. So
+      districts with low insurance show higher emergency demand per capita.
+
+  oncology:
+    indicator: women_age_30_49_years_ever_undergone_a_cervical_screen_pct
+    direction: low_means_high_demand
+    rationale: >
+      Low screening coverage is a leading indicator of late-stage cancer
+      presentation, which is what oncology services need to absorb.
+
+  trauma:
+    indicator: w15_plus_with_high_bp_sys_gte_140_mmhg_and_or_dia_gte_90_mm_pct
+    direction: high_means_high_demand
+    rationale: >
+      High hypertension prevalence correlates with stroke/CVD presentations
+      in trauma bays. Best NFHS-5 proxy for trauma load at the district grain.
+
+  icu:
+    indicator: w15_plus_with_high_bp_sys_gte_140_mmhg_and_or_dia_gte_90_mm_pct
+    direction: high_means_high_demand
+    rationale: >
+      Same hypertension signal — high BP is the dominant ICU admission driver
+      in this dataset's regions. Acceptable shared proxy with trauma.

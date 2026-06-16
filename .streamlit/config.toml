@@ -1,0 +1,15 @@
+# Streamlit base theme. Mirrors config/brand.yml so the chrome (sidebar, primary
+# buttons, links) matches the inline brand treatment. Overrides should go in
+# config/brand.yml — this file is only what the Streamlit runtime reads at
+# startup.
+[theme]
+base = "light"
+primaryColor    = "#1e4fc2"
+backgroundColor = "#eef3fb"
+secondaryBackgroundColor = "#dde6f4"
+textColor = "#0a1126"
+font = "sans serif"
+
+[server]
+headless = true
+runOnSave = false

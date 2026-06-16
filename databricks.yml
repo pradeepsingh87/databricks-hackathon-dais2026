@@ -1,0 +1,48 @@
+bundle:
+  # Stable bundle name is required (workspace state path depends on it).
+  # Per-developer namespacing happens at the Job/App resource level via
+  # ${var.app_prefix} — see config/resources/*.yml.
+  name: care-gap-nav
+
+include:
+  - config/resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog name
+    default: dais_hackathon_2026
+  app_prefix:
+    description: Per-developer prefix for the deployed Job and App resources
+    default: pradeep
+  app_git_url:
+    description: |
+      Git repository URL the Databricks App resource registers as its source
+      of truth. Required because this workspace enforces a "Git repository
+      required" policy on Apps — purely workspace-uploaded source paths are
+      rejected at create time. See config/resources/app.yml.
+    default: https://github.com/pradeepsingh87/databricks-hackathon-dais2026.git
+  app_git_branch:
+    description: |
+      Git branch the App resource pulls code from. Override per target if
+      prod should track main while dev tracks a feature branch.
+    default: feature_ps
+  genie_space_id:
+    description: |
+      ID of the Genie Space the App is bound to. The space content
+      (tables, instructions, sample questions framed as User Skills) is
+      managed via the Genie API in scripts/setup_genie.sh — the bundle
+      only declares the App's permission to invoke it. Today's bundle
+      schema (apps.AppResourceGenieSpace) only supports binding to an
+      existing space by ID; bundles do not yet author space content.
+    default: 01f16906f47611808dfc6c5061d816a1
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-f6607f85-16a2.cloud.databricks.com
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-f6607f85-16a2.cloud.databricks.com

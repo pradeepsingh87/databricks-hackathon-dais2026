@@ -1,0 +1,41 @@
+resources:
+  jobs:
+    care_gap_etl:
+      name: ${var.app_prefix}-care-gap-etl
+      # Each task is a thin entrypoint that delegates to the metadata-driven
+      # framework. Adding a new source = editing config/ingestion/sources.yml.
+      tasks:
+        - task_key: bronze_ingest_all
+          notebook_task:
+            notebook_path: ../../pipelines/bronze/ingest_facilities.py
+        - task_key: silver_normalize_all
+          depends_on: [{ task_key: bronze_ingest_all }]
+          notebook_task:
+            notebook_path: ../../pipelines/silver/normalize_claims.py
+        # Mosaic-based geocoding runs after normalize so it can join the
+        # alias-resolved state + pincode-derived district already on
+        # silver_facilities. Produces silver_facilities_geo with H3 9/10/11
+        # plus NFHS-5 indicators attached at the (state, district) grain.
+        - task_key: silver_spatial_geocode
+          depends_on: [{ task_key: silver_normalize_all }]
+          notebook_task:
+            notebook_path: ../../pipelines/silver/spatial_geocode.py
+        - task_key: silver_extract_capability_claims
+          depends_on: [{ task_key: silver_normalize_all }]
+          notebook_task:
+            notebook_path: ../../pipelines/silver/extract_capability_claims.py
+        - task_key: gold_trust_score
+          depends_on:
+            - { task_key: silver_extract_capability_claims }
+            - { task_key: silver_spatial_geocode }
+          notebook_task:
+            notebook_path: ../../pipelines/gold/trust_weighted_score.py
+        # Medical-desert scorer: claim trust × NFHS-5 demand → gap_score per
+        # (capability, h3_cell). Reads claims + geo, emits a flagged "desert"
+        # boolean and citation samples. See docs/medical_desert.md.
+        - task_key: gold_medical_desert
+          depends_on:
+            - { task_key: silver_extract_capability_claims }
+            - { task_key: silver_spatial_geocode }
+          notebook_task:
+            notebook_path: ../../pipelines/gold/medical_desert.py

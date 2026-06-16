@@ -1,0 +1,69 @@
+# Business domains for the Executive Command Center.
+#
+# Each domain bundles:
+#   capabilities  — entries from CAPABILITIES that this domain cares about
+#   indicators    — NFHS-5 columns (silver_nfhs5_district) used as
+#                   demand/disease-burden signals on the same page
+#   blurb         — one-liner shown on the home card
+#
+# Adding a new domain is a YAML edit; it lights up immediately on the home
+# page and as a filter scope on the Care Gap Navigator.
+
+domains:
+  - id: maternal_health
+    name: Maternal Health
+    icon: "👶"
+    blurb: "ANC visits, institutional birth, NICU access — the maternal continuum."
+    capabilities: [maternity, nicu]
+    indicators:
+      - column: institutional_birth_5y_pct
+        label: "Institutional birth (5y)"
+        good_when: high
+      - column: mothers_who_had_at_least_4_anc_visits_lb5y_pct
+        label: "≥4 ANC visits (last birth)"
+        good_when: high
+      - column: pregnant_w15_49_who_are_anaemic_lt_11_0_g_dl_22_pct
+        label: "Pregnant women anaemic (%)"
+        good_when: low
+
+  - id: trauma_logistics
+    name: Trauma Logistics
+    icon: "🚑"
+    blurb: "Emergency, trauma, and ICU coverage — time-to-care infrastructure."
+    capabilities: [emergency, trauma, icu]
+    indicators:
+      - column: hh_member_covered_health_insurance_pct
+        label: "Households with health insurance (%)"
+        good_when: high
+      - column: w15_plus_with_high_bp_sys_gte_140_mmhg_and_or_dia_gte_90_mm_pct
+        label: "Women w/ high BP (%)"
+        good_when: low
+
+  - id: child_health
+    name: Child Health
+    icon: "🧒"
+    blurb: "Vaccination, nutrition, NICU — under-5 outcomes."
+    capabilities: [nicu, emergency]
+    indicators:
+      - column: child_12_23m_fully_vaccinated_based_on_information_from_eit_pct
+        label: "Fully vaccinated 12–23m (%)"
+        good_when: high
+      - column: child_u5_who_are_stunted_height_for_age_18_pct
+        label: "Children under-5 stunted (%)"
+        good_when: low
+      - column: child_6_59m_who_are_anaemic_lt_11_0_g_dl_22_pct
+        label: "Children 6–59m anaemic (%)"
+        good_when: low
+
+  - id: oncology
+    name: Oncology
+    icon: "🎗️"
+    blurb: "Cancer treatment supply versus screening coverage."
+    capabilities: [oncology]
+    indicators:
+      - column: women_age_30_49_years_ever_undergone_a_cervical_screen_pct
+        label: "Women 30–49 with cervical screen (%)"
+        good_when: high
+      - column: women_age_30_49_years_ever_undergone_a_breast_exam_pct
+        label: "Women 30–49 with breast exam (%)"
+        good_when: high

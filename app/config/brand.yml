@@ -1,0 +1,23 @@
+# Sponsor / NGO branding. Edit here, or override per-deployment via env vars
+# (BRAND_NAME, BRAND_TAGLINE, BRAND_LOGO_URL, BRAND_PRIMARY, BRAND_SECONDARY,
+# BRAND_ACCENT, BRAND_BACKGROUND).
+#
+# All colors are hex (#RRGGBB). The Streamlit base theme picks them up via
+# .streamlit/config.toml; the in-app components read them through
+# app.services.brand for the inline header/footer treatments.
+
+name: "Care Gap Navigator"
+sponsor: "Virtue Foundation"
+tagline: "Distinguishing real care gaps from data-poor regions across India."
+logo_url: ""
+
+# Pale blue chrome + near-black ink. Whisper-blue background reads as
+# clean medical surface; royal-blue stays as the action accent (buttons,
+# links, focus rings); ink is near-black navy so contrast against the
+# pale background is high (~13:1, well above WCAG AA).
+primary:    "#1e4fc2"
+secondary:  "#4a7ad9"
+accent:     "#1e4fc2"
+background: "#eef3fb"
+text:       "#0a1126"
+muted:      "#5b6478"
