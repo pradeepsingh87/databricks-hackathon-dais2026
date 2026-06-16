@@ -113,10 +113,10 @@ def inject_css() -> None:
       max-width: 1320px;
     }}
 
-    /* Sidebar: subtle gradient + brand-tinted right border */
+    /* Sidebar: pure white with a hairline right border */
     section[data-testid='stSidebar'] {{
       border-right: 1px solid var(--border-soft);
-      background: linear-gradient(180deg, #fbfdfd 0%, #f4f9fa 100%);
+      background: #ffffff;
     }}
     section[data-testid='stSidebar'] [data-testid='stHeading'] h2 {{
       font-size: 14px;
@@ -169,7 +169,7 @@ def inject_css() -> None:
     [data-testid='stTextInput'] input:focus,
     [data-testid='stTextArea'] textarea:focus {{
       border-color: var(--brand-primary) !important;
-      box-shadow: 0 0 0 3px rgba(13, 111, 122, 0.12) !important;
+      box-shadow: 0 0 0 3px rgba(30, 79, 194, 0.14) !important;
     }}
 
     /* ── buttons ─────────────────────────────────────────────────────── */
@@ -238,7 +238,7 @@ def render_header(subtitle: str | None = None) -> None:
         f'{(b.sponsor or b.name)[:1].upper()}</div>'
     )
     sponsor_chip = (
-        f'<span style="display:inline-block;background:rgba(13,111,122,0.10);'
+        f'<span style="display:inline-block;background:rgba(30,79,194,0.10);'
         'color:var(--brand-primary);padding:2px 8px;border-radius:999px;'
         f'font-size:11px;margin-left:8px;">{b.sponsor}</span>'
         if b.sponsor else ""

@@ -31,27 +31,25 @@ brand.render_header(subtitle="H3 supply/demand grid · trust-weighted")
 filters = render_sidebar()
 
 # ---- Header --------------------------------------------------------------
+# brand.render_header() already shows the page title + tagline above. Just a
+# single muted context line — what's currently filtered.
+_b = "<b style='color:var(--brand-text);'>"
+_eb = "</b>"
+_chips = [
+    f"capability {_b}{filters.capability}{_eb}",
+    f"state {_b}{filters.state or 'All India'}{_eb}",
+    f"H3 {_b}{filters.h3_resolution}{_eb}",
+]
+if filters.domain:
+    _chips.append(f"domain {_b}{filters.domain}{_eb}")
+if filters.confidence_min > 0:
+    _chips.append(f"min confidence {_b}{filters.confidence_min:.2f}{_eb}")
 st.markdown(
-    f"### Care Gap Navigator"
-    f"<span style='font-size:13px;color:var(--brand-muted);margin-left:10px;'>"
-    f"capability <b>{filters.capability}</b> · state "
-    f"<b>{filters.state or 'All India'}</b> · H3 <b>{filters.h3_resolution}</b>"
-    f"{' · domain <b>' + filters.domain + '</b>' if filters.domain else ''}"
-    f"{' · min confidence <b>' + format(filters.confidence_min, '.2f') + '</b>' if filters.confidence_min > 0 else ''}"
-    f"</span>",
+    "<div style='font-size:13px;color:var(--brand-muted);margin-bottom:14px;'>"
+    + " &middot; ".join(_chips)
+    + "</div>",
     unsafe_allow_html=True,
 )
-with st.expander("How to use this page", expanded=False):
-    st.markdown(
-        "1. Pick a **capability** and (optionally) a **state** in the sidebar.\n"
-        "2. Read the map two ways: **color** = score (red→green), "
-        "**transparency** = confidence (faded = data-poor).\n"
-        "3. Sort the picker below the map by *Worst care first* and click a cell.\n"
-        "4. Use **Open in Action Center** to see the citations behind that cell, "
-        "or scroll down to tag the gap as a Data / Service / Engagement gap.\n"
-        "\nCells in **grey** are *data-deficient* — we cannot trust the score "
-        "either way. Don't conflate them with proven-absent care."
-    )
 
 # ---- KPIs ---------------------------------------------------------------
 kpis = gold.fetch_map_kpis(

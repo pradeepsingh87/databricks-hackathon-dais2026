@@ -44,13 +44,17 @@ def list_states() -> list[str]:
     names, JSON fragments, and country names, so it's unusable as a dropdown.
     The alias reference is the curated truth set the silver runner joins
     against, so dropdown values always match what silver rows can carry.
+
+    NOTE: ORDER BY references the projected alias `state`, not the original
+    column. After `SELECT DISTINCT … AS state`, Spark only resolves columns
+    in the projection; ordering by `canonical_state` raises UNRESOLVED_COLUMN.
     """
     df = query_df(
         f"""
         SELECT DISTINCT canonical_state AS state
         FROM {fq_schema('bronze')}.state_alias_reference
         WHERE canonical_state IS NOT NULL
-        ORDER BY canonical_state
+        ORDER BY state
         """
     )
     return df["state"].tolist() if not df.empty else []

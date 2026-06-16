@@ -11,10 +11,12 @@ sponsor: "Virtue Foundation"
 tagline: "Distinguishing real care gaps from data-poor regions across India."
 logo_url: ""
 
-# Calm clinical palette: deep teal primary, soft amber accent, near-white bg.
-primary:    "#0d6f7a"
-secondary:  "#2a9d8f"
-accent:     "#f4a261"
-background: "#fafbfc"
-text:       "#1d3557"
-muted:      "#6c757d"
+# Clinical royal-blue + white palette. Confident healthcare blue, pure-white
+# canvas, deep-navy ink. Accent stays in the blue family rather than the old
+# amber so chrome reads as a single calm hue.
+primary:    "#1e4fc2"
+secondary:  "#4a7ad9"
+accent:     "#1e4fc2"
+background: "#ffffff"
+text:       "#0f1e3d"
+muted:      "#6b7385"

@@ -1,6 +1,6 @@
 """Home — Care Gap Navigator landing page.
 
-Single-purpose, narrative-only landing. The deeper tools live in the sidebar:
+Single-purpose narrative landing. The deeper tools live in the sidebar:
 Care Gap Navigator (map), Genie (NL Q&A), Action Center (drill-down),
 Performance (trajectory), Scenarios (saved plans).
 """
@@ -29,86 +29,51 @@ b = brand.load_brand()
 st.markdown(
     f"""
     <div style="
-        max-width: 880px;
-        margin: 48px auto 24px auto;
-        padding: 32px 36px;
-        border-radius: var(--radius-lg);
-        background: linear-gradient(135deg,
-            rgba(13,111,122,0.06) 0%,
-            rgba(244,162,97,0.04) 100%);
-        border: 1px solid rgba(13,111,122,0.10);
+        max-width: 720px;
+        margin: 96px auto 0 auto;
+        text-align: center;
     ">
       <div style="
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 600;
-          letter-spacing: 0.10em;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
           color: var(--brand-primary);
-          margin-bottom: 12px;
+          margin-bottom: 20px;
       ">Trust-weighted healthcare planning</div>
 
       <div style="
-          font-size: 40px;
-          line-height: 1.15;
+          font-size: 44px;
+          line-height: 1.12;
           font-weight: 700;
           color: var(--brand-text);
-          margin-bottom: 18px;
+          letter-spacing: -0.01em;
+          margin-bottom: 24px;
       ">{b.name}</div>
 
       <div style="
-          font-size: 18px;
-          line-height: 1.55;
+          font-size: 19px;
+          line-height: 1.6;
           color: var(--brand-text);
-          margin-bottom: 14px;
-      ">
-        Every district has a story buried in its data —
-        a maternity ward without a delivery suite,
-        an ICU label on a hospital with no ventilator,
-        a city marked &ldquo;covered&rdquo; that has never seen a neonatal incubator.
-      </div>
-
-      <div style="
-          font-size: 18px;
-          line-height: 1.55;
-          color: var(--brand-text);
-          margin-bottom: 22px;
+          opacity: 0.82;
+          font-weight: 400;
       ">
         We weigh every claim against the evidence behind it,
-        layer it on top of the people who actually live there,
+        layer it on the people who actually live there,
         and surface the gaps that matter — so the next clinic,
         the next ambulance, the next trained nurse
         lands where it will save the most lives.
       </div>
 
       <div style="
-          display: flex;
-          flex-wrap: wrap;
-          gap: 18px;
-          font-size: 14px;
+          margin-top: 56px;
+          font-size: 13px;
           color: var(--brand-muted);
-          padding-top: 18px;
-          border-top: 1px solid rgba(13,111,122,0.10);
+          letter-spacing: 0.04em;
       ">
-        <div>🗺️&nbsp; <b style="color:var(--brand-text);">See</b> where care exists — and where it only claims to</div>
-        <div>🔎&nbsp; <b style="color:var(--brand-text);">Question</b> the evidence behind every facility</div>
-        <div>📋&nbsp; <b style="color:var(--brand-text);">Plan</b> the intervention that closes the gap</div>
+        Open <span style="color:var(--brand-primary);font-weight:600;">Care Gap Navigator</span>
+        in the sidebar to begin.
       </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-# ---- Quiet handoff to the sidebar --------------------------------------
-st.markdown(
-    """
-    <div style="
-        max-width: 880px;
-        margin: 8px auto 0 auto;
-        text-align: center;
-        font-size: 13px;
-        color: var(--brand-muted);
-    ">
-      Open <b>Care Gap Navigator</b> in the sidebar to begin.
     </div>
     """,
     unsafe_allow_html=True,
