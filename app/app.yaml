@@ -12,8 +12,13 @@ env:
     value: "5954d90879db71e9"
   - name: APP_CATALOG
     value: "dais_hackathon_2026"
+  # Genie space provisioned by scripts/setup_genie.sh — points at the
+  # 'Care Gap Navigator' room registered against the Gold + Silver tables.
+  # The ID is what the API needs; the URL is just for reference.
+  - name: GENIE_SPACE_ID
+    value: "01f16906f47611808dfc6c5061d816a1"
   - name: GENIE_SPACE_URL
-    value: ""
+    value: "https://dbc-f6607f85-16a2.cloud.databricks.com/genie/rooms/01f16906f47611808dfc6c5061d816a1"
   # Per-deployment namespace shown in the page title and used as the default
   # user_name when the Databricks Apps end-user header is missing. The bundle
   # rewrites this to ${var.app_prefix} at deploy time.

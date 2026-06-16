@@ -1,12 +1,14 @@
 """Executive Command Center — homepage of the Care Gap Navigator app.
 
 Layout:
-  1. Brand strip (logo, name, sponsor chip, tagline)
-  2. Search & Ask bar — facility lookup with toggle to natural-language Genie
-  3. "For You" — recently saved scenarios + recent overrides for this user
-  4. Domains — one card per domain (Maternal Health, Trauma Logistics, …)
-     each linking to the Care Gap Navigator pre-filtered to that lens
-  5. Top care gaps — worst-served districts overall (cross-domain teaser)
+  1. Brand strip
+  2. Search bar — facility/city/district lookup
+  3. "For You" — recently saved scenarios + overrides for this user
+  4. Domains — one card per domain, deep-links into the Care Gap Navigator
+  5. Top care gaps — worst-served districts overall
+
+Note: natural-language Q&A lives on the Genie page (sidebar), not here, so
+this page stays focused on a single primary action — *find a facility*.
 """
 
 import sys
@@ -15,8 +17,6 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-
-import os  # noqa: E402
 
 import streamlit as st  # noqa: E402
 
@@ -33,44 +33,24 @@ st.set_page_config(
 
 brand.render_header(subtitle=f"Signed in as {current_user()}")
 
-# ---- 1. Search & Ask -----------------------------------------------------
+# ---- 1. Search ----------------------------------------------------------
 with st.container(border=True):
-    mode_col, input_col = st.columns([1, 5])
-    with mode_col:
-        mode = st.radio(
-            "Mode",
-            ["Search", "Ask Genie"],
-            horizontal=True,
-            label_visibility="collapsed",
-            key="home_search_mode",
-        )
-    with input_col:
-        if mode == "Search":
-            q = st.text_input(
-                "Search facility, city, district, state",
-                key="home_search_q",
-                placeholder="e.g. 'Apollo Mumbai' · 'Patna' · 'Bihar'",
-                label_visibility="collapsed",
-            )
-        else:
-            q = st.text_input(
-                "Ask a question",
-                key="home_ask_q",
-                placeholder="e.g. 'Where are the highest-risk maternity gaps in Bihar?'",
-                label_visibility="collapsed",
-            )
-
-    if mode == "Search" and q:
-        results = gold.search_facilities(q, limit=15)
+    q = st.text_input(
+        "Find a facility",
+        key="home_search_q",
+        placeholder="Facility name, city, district, or state — e.g. 'Apollo Mumbai' · 'Patna' · 'Bihar'",
+        label_visibility="collapsed",
+    )
+    if q:
+        results = gold.search_facilities(q, limit=20)
         if results.empty:
             st.caption("No facilities matched. Try a broader term.")
         else:
             st.dataframe(results, use_container_width=True, hide_index=True)
-    elif mode == "Ask Genie" and q:
-        st.caption("Open the **Genie** page (sidebar) to converse with this query in context.")
-        genie_url = os.environ.get("GENIE_SPACE_URL", "").strip()
-        if genie_url:
-            st.link_button("Open Genie →", url=genie_url, type="primary")
+            st.caption(
+                "Open the **Care Gap Navigator** to see one of these on the map, "
+                "or **Genie** in the sidebar to ask a free-form question."
+            )
 
 st.markdown("&nbsp;")
 

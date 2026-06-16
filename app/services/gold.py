@@ -28,10 +28,21 @@ def list_capabilities() -> list[str]:
 
 
 def list_states() -> list[str]:
-    """Distinct canonicalized states from Silver. Empty list if Silver isn't built yet."""
+    """Canonicalized India state/UT list (~36 rows).
+
+    Reads from `bronze.state_alias_reference.canonical_state` rather than from
+    `silver_facilities.state` — the latter mixes 200+ values including city
+    names, JSON fragments, and country names, so it's unusable as a dropdown.
+    The alias reference is the curated truth set the silver runner joins
+    against, so dropdown values always match what silver rows can carry.
+    """
     df = query_df(
-        f"SELECT DISTINCT state FROM {SILVER}.silver_facilities "
-        f"WHERE state IS NOT NULL ORDER BY state"
+        f"""
+        SELECT DISTINCT canonical_state AS state
+        FROM {fq_schema('bronze')}.state_alias_reference
+        WHERE canonical_state IS NOT NULL
+        ORDER BY canonical_state
+        """
     )
     return df["state"].tolist() if not df.empty else []
 

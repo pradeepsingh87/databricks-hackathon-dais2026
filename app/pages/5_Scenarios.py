@@ -11,13 +11,17 @@ import streamlit as st  # noqa: E402
 
 from app.components import facility_map  # noqa: E402
 from app.components.filters import render_sidebar  # noqa: E402
-from app.services import gold, lakebase  # noqa: E402
-from app.services.user import app_prefix, current_user  # noqa: E402
+from app.services import brand, gold, lakebase  # noqa: E402
+from app.services.user import current_user  # noqa: E402
 
-st.set_page_config(page_title=f"Scenarios · {app_prefix()}", page_icon="📋", layout="wide")
+st.set_page_config(
+    page_title=f"Scenarios · {brand.load_brand().name}",
+    page_icon="📋", layout="wide",
+)
+brand.render_header(subtitle="Planning scenarios persisted to Lakebase")
 filters = render_sidebar()
 
-st.title("Planning Scenarios")
+st.markdown("### Planning Scenarios")
 st.caption(f"Save what-if allocations and overrides — signed in as **{current_user()}**.")
 
 USER = current_user()
