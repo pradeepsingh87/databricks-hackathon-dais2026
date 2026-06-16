@@ -13,15 +13,15 @@ Layout (top-down):
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_APP_ROOT = Path(__file__).resolve().parents[1]
+if str(_APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(_APP_ROOT))
 
 import streamlit as st  # noqa: E402
 
-from app.components import care_map, legend, root_cause_panel  # noqa: E402
-from app.components.filters import render_sidebar, set_selected_cell  # noqa: E402
-from app.services import brand, gold  # noqa: E402
+from components import care_map, legend, root_cause_panel  # noqa: E402
+from components.filters import render_sidebar, set_selected_cell  # noqa: E402
+from services import brand, gold  # noqa: E402
 
 st.set_page_config(
     page_title=f"Care Gap Navigator · {brand.load_brand().name}",

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from pipelines.common.config import CAPABILITIES, fq_schema
+from ._shared_config import CAPABILITIES, fq_schema
 
 from .sql_client import query_df
 

@@ -14,16 +14,16 @@ this page stays focused on a single primary action — *find a facility*.
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_APP_ROOT = Path(__file__).resolve().parent
+if str(_APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(_APP_ROOT))
 
 import streamlit as st  # noqa: E402
 
-from app.components.filters import KEYS as FILTER_KEYS  # noqa: E402
-from app.services import brand, gold, lakebase  # noqa: E402
-from app.services.domains import load_domains  # noqa: E402
-from app.services.user import current_user  # noqa: E402
+from components.filters import KEYS as FILTER_KEYS  # noqa: E402
+from services import brand, gold, lakebase  # noqa: E402
+from services.domains import load_domains  # noqa: E402
+from services.user import current_user  # noqa: E402
 
 st.set_page_config(
     page_title="Home",

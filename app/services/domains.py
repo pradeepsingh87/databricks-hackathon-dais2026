@@ -13,7 +13,7 @@ from pathlib import Path
 
 import yaml
 
-_PATH = Path(__file__).resolve().parents[2] / "config" / "domains.yml"
+_PATH = Path(__file__).resolve().parents[1] / "config" / "domains.yml"
 
 
 @dataclass(frozen=True)

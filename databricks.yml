@@ -5,10 +5,6 @@ bundle:
   name: care-gap-nav
 
 include:
-  # The Databricks App resource is intentionally NOT included in the bundle —
-  # its declaration lives at config/apps/care_gap_navigator.json and is
-  # applied imperatively by deploy.sh (Phase B). The bundle only manages
-  # jobs/UC/Genie-bound assets. See deploy.sh for the two-phase flow.
   - config/resources/*.yml
 
 variables:
@@ -18,6 +14,18 @@ variables:
   app_prefix:
     description: Per-developer prefix for the deployed Job and App resources
     default: pradeep
+  app_git_url:
+    description: |
+      Git repository URL the Databricks App resource registers as its source
+      of truth. Required because this workspace enforces a "Git repository
+      required" policy on Apps — purely workspace-uploaded source paths are
+      rejected at create time. See config/resources/app.yml.
+    default: https://github.com/pradeepsingh87/databricks-hackathon-dais2026.git
+  app_git_branch:
+    description: |
+      Git branch the App resource pulls code from. Override per target if
+      prod should track main while dev tracks a feature branch.
+    default: feature_ps
   genie_space_id:
     description: |
       ID of the Genie Space the App is bound to. The space content

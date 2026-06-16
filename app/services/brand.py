@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-_BRAND_PATH = Path(__file__).resolve().parents[2] / "config" / "brand.yml"
+_BRAND_PATH = Path(__file__).resolve().parents[1] / "config" / "brand.yml"
 
 
 @dataclass(frozen=True)

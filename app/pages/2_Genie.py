@@ -9,16 +9,16 @@ handoff to a separate page or tab. Conversation state persists in
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_APP_ROOT = Path(__file__).resolve().parents[1]
+if str(_APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(_APP_ROOT))
 
 import os  # noqa: E402
 
 import streamlit as st  # noqa: E402
 
-from app.components.filters import render_sidebar  # noqa: E402
-from app.services import brand, genie  # noqa: E402
+from components.filters import render_sidebar  # noqa: E402
+from services import brand, genie  # noqa: E402
 
 st.set_page_config(
     page_title=f"Genie · {brand.load_brand().name}",

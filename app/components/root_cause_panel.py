@@ -22,8 +22,8 @@ from dataclasses import dataclass
 
 import streamlit as st
 
-from app.services import lakebase
-from app.services.user import current_user
+from services import lakebase
+from services.user import current_user
 
 CATEGORIES: list[tuple[str, str, str]] = [
     # (db value, display label, one-line explanation)

@@ -11,8 +11,8 @@ from dataclasses import dataclass
 
 import streamlit as st
 
-from app.services import gold
-from app.services.domains import load_domains
+from services import gold
+from services.domains import load_domains
 
 KEYS = {
     "domain":         "filter_domain",

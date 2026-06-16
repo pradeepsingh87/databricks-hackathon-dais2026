@@ -4,33 +4,30 @@
 #  Profile: DEFAULT  (override via DATABRICKS_PROFILE)
 #  Target : dev      (override via BUNDLE_TARGET)
 #
-#  Two phases run in sequence by default:
-#
-#  Phase A — bundle assets (skipped when APP_ONLY=1):
+#  What this does (in order):
 #    1. CLI version + auth preflight
 #    2. bundle validate
-#    3. bundle deploy                  (uploads code + creates Job resource)
+#    3. bundle deploy                  (creates/updates the Job AND the App
+#                                       resource — including the App↔Genie
+#                                       binding and the attached
+#                                       git_repository declared in
+#                                       config/resources/app.yml)
+#    3b. apps deploy --json            (creates an App deployment from Git;
+#                                       required because this workspace
+#                                       enforces a "Git source required"
+#                                       policy on Apps)
 #    4. setup_uc.sh                    (creates UC schemas + Lakebase tables)
 #    5. setup_genie.sh                 (idempotent Genie space provision)
 #    6. apply uc_metadata.sql          (table comments + tags + certified)
 #    7. bundle run care_gap_etl --no-wait
-#
-#  Phase B — app lifecycle (skipped when BUNDLE_ONLY=1):
-#    8. apps create-or-update          (idempotent, payload at
-#                                       config/apps/care_gap_navigator.json)
-#    9. apps deploy                    (binds bundle-uploaded source path)
-#   10. apps stop  +  apps start       (clean restart so new code loads)
-#
-#  Phase flags (mutually exclusive):
-#    BUNDLE_ONLY=1      run Phase A only (alias: SKIP_APP=1, deprecated)
-#    APP_ONLY=1         run Phase B only (still reads bundle summary
-#                                          to compute APP_SOURCE_PATH)
+#    8. apps stop  +  apps start       (clean restart so new deployment loads)
 #
 #  Skip / customise via env vars:
 #    SKIP_UC=1          skip UC schema + Lakebase table creation
 #    SKIP_GENIE=1       skip Genie space provision
 #    SKIP_METADATA=1    skip table comments + tags + certified pass
 #    SKIP_ETL=1         skip ETL trigger
+#    SKIP_APP=1         skip App restart
 #    APP_PREFIX=foo     override the per-developer prefix
 #    DATABRICKS_WAREHOUSE_ID=...   warehouse for setup_uc.sh + setup_genie.sh
 # ============================================================
@@ -44,22 +41,6 @@ TARGET="${BUNDLE_TARGET:-dev}"
 sanitize() { echo "$1" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9-' '-' | sed 's/^-*//; s/-*$//'; }
 APP_PREFIX="${APP_PREFIX:-$(sanitize "${USER:-pradeep}")}"
 echo "[deploy] app_prefix     : $APP_PREFIX"
-
-# ---- Phase flag parsing ------------------------------------------------
-# SKIP_APP is the historical name; map it onto BUNDLE_ONLY for one cycle.
-if [ "${SKIP_APP:-0}" = "1" ] && [ "${BUNDLE_ONLY:-0}" != "1" ]; then
-  echo "[deploy] WARN: SKIP_APP is deprecated — use BUNDLE_ONLY=1 instead."
-  BUNDLE_ONLY=1
-fi
-if [ "${BUNDLE_ONLY:-0}" = "1" ] && [ "${APP_ONLY:-0}" = "1" ]; then
-  echo "[deploy] ERROR: BUNDLE_ONLY=1 and APP_ONLY=1 are mutually exclusive."
-  exit 1
-fi
-RUN_PHASE_A=1
-RUN_PHASE_B=1
-[ "${APP_ONLY:-0}" = "1" ]    && RUN_PHASE_A=0
-[ "${BUNDLE_ONLY:-0}" = "1" ] && RUN_PHASE_B=0
-echo "[deploy] phases         : A=$RUN_PHASE_A (bundle)  B=$RUN_PHASE_B (app)"
 
 # ---- Preflight ---------------------------------------------------------
 MIN_CLI_MAJOR=0
@@ -97,82 +78,95 @@ fi
 WAREHOUSE_ID="${DATABRICKS_WAREHOUSE_ID:-5954d90879db71e9}"
 export DATABRICKS_WAREHOUSE_ID="$WAREHOUSE_ID"
 
-# ============================================================
-#  PHASE A — bundle assets
-# ============================================================
-if [ "$RUN_PHASE_A" = "1" ]; then
-  # ---- 1. Validate -----------------------------------------------------
-  echo
-  echo "[deploy] (1/7) Validating bundle ..."
-  databricks --profile "$PROFILE" bundle validate --target "$TARGET" \
-    --var="app_prefix=${APP_PREFIX}"
+# ---- 1. Validate -------------------------------------------------------
+echo
+echo "[deploy] (1/8) Validating bundle ..."
+databricks --profile "$PROFILE" bundle validate --target "$TARGET" \
+  --var="app_prefix=${APP_PREFIX}"
 
-  # ---- 2. Deploy -------------------------------------------------------
-  echo
-  echo "[deploy] (2/7) Deploying bundle to target '$TARGET' ..."
-  databricks --profile "$PROFILE" bundle deploy --target "$TARGET" \
-    --var="app_prefix=${APP_PREFIX}"
-fi
+# ---- 2. Deploy ---------------------------------------------------------
+# `bundle deploy` creates/updates both the Job and the App *resource*
+# (including the Genie binding and the attached git_repository declared in
+# config/resources/app.yml). It does NOT create an App deployment that
+# actually serves code — that's handled in step 2b below, which posts a
+# git_source deployment so the workspace's "Git required" policy is
+# satisfied.
+echo
+echo "[deploy] (2/8) Deploying bundle to target '$TARGET' ..."
+databricks --profile "$PROFILE" bundle deploy --target "$TARGET" \
+  --var="app_prefix=${APP_PREFIX}"
 
-# Resolve workspace file path + Genie space ID + job name from bundle summary.
-# This works in both phases:
-#   - Phase A on its own: post-deploy summary read.
-#   - APP_ONLY=1: read-only summary (no deploy) to discover the path the
-#     bundle previously synced /app/ to.
+# Resolve actual deployed names from the bundle (dev-mode adds an extra
+# prefix that we cannot reconstruct from APP_PREFIX alone — must read it
+# back).
 SUMMARY="$(databricks --profile "$PROFILE" bundle summary --target "$TARGET" \
   --var="app_prefix=${APP_PREFIX}" -o json 2>/dev/null)"
+APP_NAME="$(echo "$SUMMARY" | jq -r '.resources.apps.care_gap_navigator.name // empty')"
 JOB_NAME="$(echo "$SUMMARY" | jq -r '.resources.jobs.care_gap_etl.name // empty')"
-WS_FILE_PATH="$(echo "$SUMMARY" | jq -r '.workspace.file_path // empty')"
-GENIE_SPACE_ID="$(echo "$SUMMARY" | jq -r '.variables.genie_space_id.value // empty')"
-APP_NAME="${APP_PREFIX}-care-gap-navigator"
-APP_SOURCE_PATH=""
-[ -n "$WS_FILE_PATH" ] && APP_SOURCE_PATH="${WS_FILE_PATH}/app"
+APP_GIT_BRANCH="$(echo "$SUMMARY" | jq -r '.variables.app_git_branch.value // "main"')"
+APP_GIT_SUBPATH="app"
 
-if [ "$RUN_PHASE_B" = "1" ] && [ -z "$APP_SOURCE_PATH" ]; then
-  echo "[deploy] ERROR: could not resolve workspace.file_path from bundle summary."
-  echo "[deploy]        Run 'databricks bundle summary --target $TARGET' manually."
+if [ -z "$APP_NAME" ]; then
+  echo "[deploy] ERROR: could not resolve the App name from bundle summary."
+  echo "[deploy]        Check 'databricks bundle summary --target $TARGET' manually."
   exit 1
 fi
-[ "$RUN_PHASE_A" = "1" ] && echo "[deploy] resolved Job  : ${JOB_NAME:-<unknown>}"
 echo "[deploy] resolved App  : $APP_NAME"
+echo "[deploy] resolved Job  : $JOB_NAME"
+echo "[deploy] git source     : branch=$APP_GIT_BRANCH path=$APP_GIT_SUBPATH"
 
-if [ "$RUN_PHASE_A" = "1" ]; then
-  # ---- 3. UC schemas + Lakebase ----------------------------------------
-  if [ "${SKIP_UC:-0}" = "1" ]; then
-    echo
-    echo "[deploy] (3/7) SKIP_UC=1 — skipping UC + Lakebase setup."
-  else
-    echo
-    echo "[deploy] (3/7) Provisioning UC schemas + Lakebase tables ..."
-    ./scripts/setup_uc.sh
-  fi
+# ---- 2b. Create an app deployment from Git ------------------------------
+# `bundle deploy` creates the App *resource* and attaches the git_repository
+# (config/resources/app.yml), but it does NOT create a deployment that
+# actually serves code. The workspace's "Git required" policy means we
+# can't deploy from the workspace-uploaded source path — we have to push a
+# git_source deployment that points at the GitHub repo + branch.
+echo
+echo "[deploy] (2b/8) Creating App deployment from Git (branch=$APP_GIT_BRANCH) ..."
+DEPLOY_PAYLOAD="$(jq -n \
+  --arg branch  "$APP_GIT_BRANCH" \
+  --arg subpath "$APP_GIT_SUBPATH" \
+  '{mode: "SNAPSHOT", git_source: {branch: $branch, source_code_path: $subpath}}')"
+databricks --profile "$PROFILE" apps deploy "$APP_NAME" \
+  --json "$DEPLOY_PAYLOAD" --no-wait >/dev/null 2>&1 || \
+  echo "[deploy] WARN: apps deploy returned non-zero (continuing — start may still pick up new code)."
 
-  # ---- 4. Genie space --------------------------------------------------
-  if [ "${SKIP_GENIE:-0}" = "1" ]; then
-    echo
-    echo "[deploy] (4/7) SKIP_GENIE=1 — skipping Genie space provision."
-  else
-    echo
-    echo "[deploy] (4/7) Provisioning Genie space ..."
-    ./scripts/setup_genie.sh || \
-      echo "[deploy] WARN: Genie provision returned non-zero (continuing)."
-  fi
+# ---- 3. UC schemas + Lakebase ------------------------------------------
+if [ "${SKIP_UC:-0}" = "1" ]; then
+  echo
+  echo "[deploy] (3/8) SKIP_UC=1 — skipping UC + Lakebase setup."
+else
+  echo
+  echo "[deploy] (3/8) Provisioning UC schemas + Lakebase tables ..."
+  ./scripts/setup_uc.sh
+fi
 
-  # ---- 5. UC metadata (comments + tags + certified) -------------------
-  # Best-effort; some ALTERs SKIP cleanly when target tables aren't
-  # materialised yet (medical_desert_*, silver_facilities_geo). The Python
-  # helper handles UTF-8 in COMMENTs, which the shell-piped jq pattern can't.
-  if [ "${SKIP_METADATA:-0}" = "1" ]; then
-    echo
-    echo "[deploy] (5/7) SKIP_METADATA=1 — skipping UC metadata pass."
-  elif [ ! -f sql/tags/uc_metadata.sql ]; then
-    echo
-    echo "[deploy] (5/7) sql/tags/uc_metadata.sql missing — skipping."
-  else
-    echo
-    echo "[deploy] (5/7) Applying UC metadata (table comments + tags + certified) ..."
-    python3 - <<'PY' "$PROFILE" "$WAREHOUSE_ID" "sql/tags/uc_metadata.sql" || \
-      echo "[deploy] WARN: metadata pass had failures (continuing)."
+# ---- 4. Genie space ----------------------------------------------------
+if [ "${SKIP_GENIE:-0}" = "1" ]; then
+  echo
+  echo "[deploy] (4/8) SKIP_GENIE=1 — skipping Genie space provision."
+else
+  echo
+  echo "[deploy] (4/8) Provisioning Genie space ..."
+  ./scripts/setup_genie.sh || \
+    echo "[deploy] WARN: Genie provision returned non-zero (continuing)."
+fi
+
+# ---- 5. UC metadata (comments + tags + certified) ---------------------
+# Best-effort; some ALTERs SKIP cleanly when target tables aren't materialised
+# yet (medical_desert_*, silver_facilities_geo). The Python helper handles
+# UTF-8 in COMMENTs, which the shell-piped jq pattern can't.
+if [ "${SKIP_METADATA:-0}" = "1" ]; then
+  echo
+  echo "[deploy] (5/8) SKIP_METADATA=1 — skipping UC metadata pass."
+elif [ ! -f sql/tags/uc_metadata.sql ]; then
+  echo
+  echo "[deploy] (5/8) sql/tags/uc_metadata.sql missing — skipping."
+else
+  echo
+  echo "[deploy] (5/8) Applying UC metadata (table comments + tags + certified) ..."
+  python3 - <<'PY' "$PROFILE" "$WAREHOUSE_ID" "sql/tags/uc_metadata.sql" || \
+    echo "[deploy] WARN: metadata pass had failures (continuing)."
 import json, re, subprocess, sys
 
 profile, warehouse, sql_path = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -202,80 +196,37 @@ for stmt in stmts:
             failed += 1
 print(f"[deploy]     metadata: {ok} ok, {skipped} skipped (table not built), {failed} failed")
 PY
-  fi
-
-  # ---- 6. Trigger ETL (fire-and-forget) --------------------------------
-  if [ "${SKIP_ETL:-0}" = "1" ]; then
-    echo
-    echo "[deploy] (6/7) SKIP_ETL=1 — skipping ETL trigger."
-  else
-    echo
-    echo "[deploy] (6/7) Triggering ETL job '${JOB_NAME:-<unknown>}' (fire-and-forget) ..."
-    databricks --profile "$PROFILE" bundle run care_gap_etl \
-      --target "$TARGET" --var="app_prefix=${APP_PREFIX}" --no-wait || {
-      echo "[deploy] WARN: ETL trigger failed. Run manually:"
-      echo "[deploy]       databricks --profile $PROFILE bundle run care_gap_etl --target $TARGET --var=app_prefix=${APP_PREFIX}"
-    }
-  fi
-
-  echo
-  echo "[deploy] (7/7) Phase A done."
 fi
 
-# ============================================================
-#  PHASE B — app lifecycle
-# ============================================================
-if [ "$RUN_PHASE_B" != "1" ]; then
-  echo "[deploy] BUNDLE_ONLY=1 — skipping Phase B (app)."
+# ---- 6. Trigger ETL (fire-and-forget) ----------------------------------
+if [ "${SKIP_ETL:-0}" = "1" ]; then
+  echo
+  echo "[deploy] (6/8) SKIP_ETL=1 — skipping ETL trigger."
+else
+  echo
+  echo "[deploy] (6/8) Triggering ETL job '${JOB_NAME}' (fire-and-forget) ..."
+  databricks --profile "$PROFILE" bundle run care_gap_etl \
+    --target "$TARGET" --var="app_prefix=${APP_PREFIX}" --no-wait || {
+    echo "[deploy] WARN: ETL trigger failed. Run manually:"
+    echo "[deploy]       databricks --profile $PROFILE bundle run care_gap_etl --target $TARGET --var=app_prefix=${APP_PREFIX}"
+  }
+fi
+
+# ---- 7-8. App restart --------------------------------------------------
+# Step 2b created a fresh git_source deployment. Restart so the running
+# container picks it up. (`apps deploy --no-wait` doesn't bounce the app.)
+if [ "${SKIP_APP:-0}" = "1" ]; then
+  echo
+  echo "[deploy] (7/8) SKIP_APP=1 — skipping App restart."
   echo "[deploy] Done."
   exit 0
 fi
-
-APP_PAYLOAD_TEMPLATE="config/apps/care_gap_navigator.json"
-if [ ! -f "$APP_PAYLOAD_TEMPLATE" ]; then
-  echo "[deploy] ERROR: $APP_PAYLOAD_TEMPLATE not found."
-  exit 1
-fi
-if [ -z "$GENIE_SPACE_ID" ]; then
-  echo "[deploy] ERROR: could not resolve genie_space_id from bundle summary."
-  echo "[deploy]        Check 'databricks bundle summary --target $TARGET' or set"
-  echo "[deploy]        databricks.yml variables.genie_space_id."
-  exit 1
-fi
-
-# Render the create/update payload by injecting the resolved name + space id
-# into the template. The template ships with sentinel placeholders; jq rewrites
-# them so callers can re-run with a different APP_PREFIX without editing JSON.
-APP_PAYLOAD="$(jq \
-  --arg name "$APP_NAME" \
-  --arg sid  "$GENIE_SPACE_ID" \
-  '.name = $name | .resources[0].genie_space.space_id = $sid' \
-  "$APP_PAYLOAD_TEMPLATE")"
-
-echo
-echo "[deploy] (8/10) Ensuring App '${APP_NAME}' exists (with Genie binding) ..."
-if databricks --profile "$PROFILE" apps get "$APP_NAME" >/dev/null 2>&1; then
-  echo "[deploy]        App exists — applying update payload ..."
-  databricks --profile "$PROFILE" apps update "$APP_NAME" --json "$APP_PAYLOAD" >/dev/null 2>&1 || \
-    echo "[deploy] WARN: apps update returned non-zero (continuing — apps deploy may still proceed)."
-else
-  echo "[deploy]        App not found — creating ..."
-  databricks --profile "$PROFILE" apps create --json "$APP_PAYLOAD" --no-compute >/dev/null
-  echo "[deploy]        App created."
-fi
-
-# Push the latest code by binding the bundle-uploaded source path to the App.
-echo
-echo "[deploy] (9/10) Pushing latest code to App '${APP_NAME}' ..."
-databricks --profile "$PROFILE" apps deploy "$APP_NAME" \
-  --source-code-path "$APP_SOURCE_PATH" --no-wait >/dev/null 2>&1 || \
-  echo "[deploy] WARN: apps deploy returned non-zero (continuing — start may still pick up new code)."
 
 # Read state. Stop only if running so the start sees fresh code.
 APP_STATE_RAW="$(databricks --profile "$PROFILE" apps get "$APP_NAME" 2>/dev/null \
   | jq -r '.compute_status.state // .app_status.state // "UNKNOWN"')"
 echo
-echo "[deploy] (10/10) App state: ${APP_STATE_RAW}"
+echo "[deploy] (7/8) App state: ${APP_STATE_RAW}"
 
 if [ "$APP_STATE_RAW" = "RUNNING" ] || [ "$APP_STATE_RAW" = "STARTING" ]; then
   echo "[deploy]      Stopping for clean restart ..."
@@ -283,7 +234,7 @@ if [ "$APP_STATE_RAW" = "RUNNING" ] || [ "$APP_STATE_RAW" = "STARTING" ]; then
     echo "[deploy] WARN: stop call failed (continuing)."
 fi
 
-echo "[deploy]      Starting App ..."
+echo "[deploy] (8/8) Starting App ..."
 if ! databricks --profile "$PROFILE" apps start "$APP_NAME" >/dev/null 2>&1; then
   echo "[deploy] WARN: start call returned non-zero. Polling status ..."
 fi
@@ -311,11 +262,11 @@ APP_URL="$(databricks --profile "$PROFILE" apps get "$APP_NAME" 2>/dev/null \
 
 echo
 echo "[deploy] Done."
-[ "$RUN_PHASE_A" = "1" ] && echo "[deploy]   ETL job   : ${JOB_NAME:-<unknown>}  (running in background)"
+echo "[deploy]   ETL job   : ${JOB_NAME}  (running in background)"
 echo "[deploy]   App       : ${APP_NAME}  (state: ${APP_STATE_RAW})"
 [ -n "$APP_URL" ] && echo "[deploy]   App URL   : ${APP_URL}"
 echo "[deploy]"
-[ "$RUN_PHASE_A" = "1" ] && echo "[deploy] Watch ETL progress:" && \
-  echo "[deploy]   databricks --profile $PROFILE bundle open --target $TARGET care_gap_etl"
+echo "[deploy] Watch ETL progress:"
+echo "[deploy]   databricks --profile $PROFILE bundle open --target $TARGET care_gap_etl"
 echo "[deploy] Tail App logs:"
 echo "[deploy]   databricks --profile $PROFILE apps logs $APP_NAME"
