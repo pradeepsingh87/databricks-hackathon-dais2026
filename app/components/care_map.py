@@ -146,5 +146,10 @@ def render(df: pd.DataFrame, height: int = 560, key: str = "care-map") -> None:
         map_provider="carto",
         map_style="light",
         tooltip=tooltip,
+        # Older Streamlit builds (≤1.40 in the deployed Apps runtime) don't
+        # accept `height=` on st.pydeck_chart. Set it on the deck object
+        # itself instead — pydeck honours height via the Deck-level height
+        # property which is rendered into the JSON spec Streamlit forwards.
+        height=height,
     )
-    st.pydeck_chart(deck, use_container_width=True, height=height, key=key)
+    st.pydeck_chart(deck, use_container_width=True, key=key)

@@ -156,8 +156,11 @@ def render(df: pd.DataFrame, height: int = 420, key: str = "facility-map") -> No
         map_provider="carto",
         map_style="light",
         tooltip=tooltip,
+        # Older Streamlit on the Apps runtime doesn't accept `height=` on
+        # st.pydeck_chart — set it on the deck object instead.
+        height=height,
     )
-    st.pydeck_chart(deck, use_container_width=True, height=height, key=key)
+    st.pydeck_chart(deck, use_container_width=True, key=key)
 
 
 def render_legend() -> None:
