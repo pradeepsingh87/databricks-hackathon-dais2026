@@ -5,6 +5,10 @@ bundle:
   name: care-gap-navigator
 
 include:
+  # The Databricks App resource is intentionally NOT included in the bundle —
+  # its declaration lives at config/apps/care_gap_navigator.json and is
+  # applied imperatively by deploy.sh (Phase B). The bundle only manages
+  # jobs/UC/Genie-bound assets. See deploy.sh for the two-phase flow.
   - config/resources/*.yml
 
 variables:

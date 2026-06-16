@@ -20,9 +20,12 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 
 import pandas as pd
 import requests
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.core import Config
 
 _API_VERSION = "2.0"
 _TIMEOUT = 30           # per HTTP request
@@ -30,16 +33,33 @@ _POLL_DEADLINE = 120    # seconds we'll wait for a message to COMPLETE
 _POLL_INTERVAL = 2.0    # how often to re-check status
 
 
+@lru_cache(maxsize=1)
+def _client() -> WorkspaceClient | None:
+    """Build a WorkspaceClient using the SDK's unified auth chain.
+
+    On Databricks Apps the runtime injects DATABRICKS_HOST + an OAuth token
+    via env vars; locally the SDK falls back to ~/.databrickscfg (PAT or
+    OAuth U2M). Returns None if no auth source resolves so callers can show
+    a friendly empty state instead of crashing.
+    """
+    try:
+        cfg = Config()  # picks up env vars + ~/.databrickscfg
+        # touch authenticate() so a missing source raises here, not on first call
+        cfg.authenticate()
+        return WorkspaceClient(config=cfg)
+    except Exception:
+        return None
+
+
 def _host() -> str:
+    c = _client()
+    if c is not None:
+        return c.config.host.rstrip("/")
     return os.environ.get("DATABRICKS_HOST", "").rstrip("/")
 
 
-def _token() -> str:
-    return os.environ.get("DATABRICKS_TOKEN", "")
-
-
 def is_configured() -> bool:
-    return bool(_host() and _token() and os.environ.get("GENIE_SPACE_ID"))
+    return bool(_client() is not None and _host() and os.environ.get("GENIE_SPACE_ID"))
 
 
 def space_id() -> str:
@@ -47,7 +67,14 @@ def space_id() -> str:
 
 
 def _headers() -> dict:
-    return {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json"}
+    c = _client()
+    if c is None:
+        return {"Content-Type": "application/json"}
+    # cfg.authenticate() returns a fresh dict of auth headers each call —
+    # for OAuth tokens this transparently refreshes near expiry.
+    h = dict(c.config.authenticate())
+    h["Content-Type"] = "application/json"
+    return h
 
 
 @dataclass

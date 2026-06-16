@@ -38,9 +38,11 @@ st.caption(
 if not genie.is_configured():
     with st.container(border=True):
         st.warning(
-            "Genie is not configured. Set `GENIE_SPACE_ID`, `DATABRICKS_HOST`, "
-            "and `DATABRICKS_TOKEN` on the app — or run `./scripts/setup_genie.sh` "
-            "and copy the printed values into your `.env`.",
+            "Genie is not configured. Set `GENIE_SPACE_ID` on the app and "
+            "make sure Databricks auth is available — on Databricks Apps "
+            "this is automatic; locally, run `databricks auth login` or set "
+            "`DATABRICKS_HOST` + `DATABRICKS_TOKEN` in your `.env`. "
+            "Provision the space with `./scripts/setup_genie.sh`.",
             icon="🧞",
         )
     st.stop()

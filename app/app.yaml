@@ -8,14 +8,13 @@ command: ["streamlit", "run", "main.py", "--server.port=8000", "--server.address
 # `streamlit run` local development.
 env:
   # ---- Workspace identity ------------------------------------------------
-  # Databricks Apps injects DATABRICKS_HOST automatically at runtime; the
-  # value here is the local-dev fallback. Token MUST stay blank in source —
-  # populate it in your local .env (see config/.env.example) or a workspace
-  # secret reference.
+  # Databricks Apps injects DATABRICKS_HOST and an OAuth token for the app's
+  # service principal automatically at runtime — no DATABRICKS_TOKEN needed
+  # in this file. The host below is the local-dev fallback only; for local
+  # auth, run `databricks auth login` (the SDK picks it up from
+  # ~/.databrickscfg) or set DATABRICKS_TOKEN in your .env.
   - name: DATABRICKS_HOST
     value: "https://dbc-f6607f85-16a2.cloud.databricks.com"
-  - name: DATABRICKS_TOKEN
-    value: ""
   - name: DATABRICKS_WAREHOUSE_ID
     value: "5954d90879db71e9"
 
