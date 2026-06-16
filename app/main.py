@@ -26,7 +26,7 @@ from app.services.domains import load_domains  # noqa: E402
 from app.services.user import current_user  # noqa: E402
 
 st.set_page_config(
-    page_title=brand.load_brand().name,
+    page_title="Home",
     page_icon="🏥",
     layout="wide",
 )

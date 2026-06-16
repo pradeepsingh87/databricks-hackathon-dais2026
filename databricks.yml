@@ -2,7 +2,7 @@ bundle:
   # Stable bundle name is required (workspace state path depends on it).
   # Per-developer namespacing happens at the Job/App resource level via
   # ${var.app_prefix} — see config/resources/*.yml.
-  name: care-gap-navigator
+  name: care-gap-nav
 
 include:
   # The Databricks App resource is intentionally NOT included in the bundle —
