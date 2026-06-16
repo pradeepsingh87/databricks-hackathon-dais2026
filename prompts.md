@@ -74,7 +74,7 @@ Prioritize low-risk UI refactors only.
 
 ## Scope
 Primary files:
-app/main.py
+app/Home.py
 app/pages/1_Care_Gap_Navigator.py
 app/pages/3_Action_Center.py
 app/pages/4_Performance.py

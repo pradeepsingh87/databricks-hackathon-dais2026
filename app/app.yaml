@@ -1,4 +1,4 @@
-command: ["streamlit", "run", "main.py", "--server.port=8000", "--server.address=0.0.0.0"]
+command: ["streamlit", "run", "Home.py", "--server.port=8000", "--server.address=0.0.0.0"]
 
 # Env values populated below are sensible defaults for THIS workspace. For
 # any other workspace, override these on the deployed App resource via the

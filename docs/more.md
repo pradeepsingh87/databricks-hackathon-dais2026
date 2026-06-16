@@ -28,7 +28,7 @@ graph TD
     UC --> CATALOG_BROWSE[Catalog Explorer<br/>Genie One mobile]
 
     subgraph "App · Streamlit on Databricks Apps"
-      APP[main.py · Executive Command Center]
+      APP[Home.py · Executive Command Center]
       APP --> P1[Care Gap Navigator<br/>pydeck H3HexagonLayer<br/>color=score, alpha=confidence]
       APP --> P3[Action Center<br/>citations · NACHC root-cause panel<br/>override notes]
       APP --> P4[Performance<br/>district risk stratification]

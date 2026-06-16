@@ -14,7 +14,7 @@
 
 | Dimension | Family A — `*_care_score` | Family B — `medical_desert_*` |
 |---|---|---|
-| **UI compatibility** | ✅ Already wired across `app/services/gold.py`, `app/components/care_map.py`, `app/pages/{1,3,4,5}*.py`, `app/main.py` | ❌ Zero app reads. Adopting B = full re-wire of services + pages + tooltips. |
+| **UI compatibility** | ✅ Already wired across `app/services/gold.py`, `app/components/care_map.py`, `app/pages/{1,3,4,5}*.py`, `app/Home.py` | ❌ Zero app reads. Adopting B = full re-wire of services + pages + tooltips. |
 | **Citation support** | Citations live on `silver_facility_capability_claims`; pages join from there. Schema doesn't carry citations on the gold rows. | Carries `top_citations` ARRAY<STRUCT> directly on each row. *Slightly stronger.* |
 | **Uncertainty semantics** | `score` (0..1) + `confidence` (0..1) + `evidence_state` ∈ `{data_deficient, care_gap, covered}` + `data_deficient` boolean. **Already drives the alpha-from-confidence map encoding** in [care_map.py](../app/components/care_map.py). | `gap_score` (NULL when demand unknown) + `confidence_label` (strong/partial/suspicious/none) + `desert_flag`. Cleaner naming, but the alpha encoding logic in the app reads `confidence`, not `confidence_label`. |
 | **Demand model** | No NFHS-5 demand integration; scoring is supply-confidence only. | Joins NFHS-5 indicator per capability → multiplicative `gap = (1−supply) × demand`. *Genuinely better economics.* |

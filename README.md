@@ -29,7 +29,7 @@ pip install -r requirements.txt
 cp config/.env.example .env       # then fill in DATABRICKS_TOKEN
 
 # 3 · run locally
-streamlit run app/main.py
+streamlit run app/Home.py
 
 # 4 · deploy to Databricks Apps
 ./deploy.sh                       # bundle deploy + smoke tests
@@ -37,7 +37,7 @@ streamlit run app/main.py
 
 ## Required env vars
 
-For local `streamlit run app/main.py`:
+For local `streamlit run app/Home.py`:
 
 | Var | Used by | Notes |
 | --- | --- | --- |
