@@ -1,0 +1,17 @@
+command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "$DATABRICKS_APP_PORT"]
+
+env:
+  - name: DATABRICKS_HOST
+    value: "https://dbc-f6607f85-16a2.cloud.databricks.com"
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: "5954d90879db71e9"
+  - name: APP_CATALOG
+    value: "dais_hackathon_2026"
+  - name: GENIE_SPACE_ID
+    value: "01f16906f47611808dfc6c5061d816a1"
+  - name: GENIE_SPACE_URL
+    value: "https://dbc-f6607f85-16a2.cloud.databricks.com/genie/rooms/01f16906f47611808dfc6c5061d816a1"
+  - name: APP_PREFIX
+    value: "pradeep"
+  - name: APP_USER
+    value: ""
