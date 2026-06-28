@@ -18,7 +18,6 @@ if str(_APP_ROOT) not in sys.path:
     sys.path.insert(0, str(_APP_ROOT))
 
 import streamlit as st  # noqa: E402
-
 from components import care_map, legend, root_cause_panel  # noqa: E402
 from components.filters import render_sidebar, set_selected_cell  # noqa: E402
 from services import brand, gold  # noqa: E402
@@ -135,10 +134,14 @@ if not df.empty:
             "Cell",
             options=sorted_df["h3_cell"].tolist(),
             format_func=lambda h: (
-                f"{h}  ·  score={float(sorted_df.loc[sorted_df.h3_cell == h, 'score'].iloc[0]):.2f}"
-                f"  ·  conf={float(sorted_df.loc[sorted_df.h3_cell == h, 'confidence'].iloc[0]):.2f}"
-                f"  ·  n={int(sorted_df.loc[sorted_df.h3_cell == h, 'n_facilities'].iloc[0])}"
-                f"  ·  {sorted_df.loc[sorted_df.h3_cell == h, 'evidence_state'].iloc[0]}"
+                f"{h}  ·  score="
+                f"{float(sorted_df.loc[sorted_df.h3_cell == h, 'score'].iloc[0]):.2f}"
+                f"  ·  conf="
+                f"{float(sorted_df.loc[sorted_df.h3_cell == h, 'confidence'].iloc[0]):.2f}"
+                f"  ·  n="
+                f"{int(sorted_df.loc[sorted_df.h3_cell == h, 'n_facilities'].iloc[0])}"
+                f"  ·  "
+                f"{sorted_df.loc[sorted_df.h3_cell == h, 'evidence_state'].iloc[0]}"
             ),
         )
         # Cross-filter: writing the picked cell to session_state immediately

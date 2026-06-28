@@ -8,7 +8,6 @@ if str(_APP_ROOT) not in sys.path:
 import json  # noqa: E402
 
 import streamlit as st  # noqa: E402
-
 from components import facility_map  # noqa: E402
 from components.filters import render_sidebar  # noqa: E402
 from services import brand, gold, lakebase  # noqa: E402
@@ -105,7 +104,10 @@ with st.form("new-scenario"):
 # load one to land on the same view their colleague was looking at.
 st.divider()
 st.subheader("Filter bookmarks")
-st.caption("Save the current sidebar filter state. Share with teammates so they land on the same view.")
+st.caption(
+    "Save the current sidebar filter state. Share with teammates"
+    " so they land on the same view."
+)
 
 bm_left, bm_right = st.columns([3, 2])
 with bm_left:
@@ -162,7 +164,10 @@ gap_log = lakebase.list_gap_categorizations(
     state=filters.state,
 )
 if gap_log.empty:
-    st.caption("No categorisations yet — tag a cell from the **Care Gap Navigator** or **Action Center**.")
+    st.caption(
+        "No categorisations yet — tag a cell from the"
+        " **Care Gap Navigator** or **Action Center**."
+    )
 else:
     st.dataframe(
         gap_log[["created_at", "user_name", "category", "severity",

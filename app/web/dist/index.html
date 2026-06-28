@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Care Gap Navigator</title>
+    <style>
+      :root {
+        --bg: #f4f8fb;
+        --panel: #ffffff;
+        --panel-alt: #eef4f8;
+        --text: #173042;
+        --muted: #5f7382;
+        --border: #d8e2ea;
+        --primary: #0f766e;
+        --secondary: #2563eb;
+        --accent: #b45309;
+        --success: #15803d;
+        --danger: #b91c1c;
+        --radius: 10px;
+        --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--text);
+        background:
+          linear-gradient(180deg, rgba(15, 118, 110, 0.06), transparent 220px),
+          var(--bg);
+      }
+      header {
+        display: flex;
+        gap: 16px;
+        align-items: flex-end;
+        justify-content: space-between;
+        padding: 20px 24px 12px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(244, 248, 251, 0.92);
+        position: sticky;
+        top: 0;
+        backdrop-filter: blur(10px);
+        z-index: 10;
+      }
+      .brand h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.1;
+      }
+      .brand p, .status, .eyebrow {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      nav button, .controls button, .form-row button {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      nav button.active, .controls button.primary, .form-row button.primary {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+      }
+      main {
+        display: grid;
+        grid-template-columns: 290px minmax(0, 1fr);
+        gap: 18px;
+        padding: 18px 24px 28px;
+        align-items: start;
+      }
+      aside, section.panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+      aside {
+        padding: 14px;
+        position: sticky;
+        top: 96px;
+      }
+      section.panel {
+        padding: 16px;
+        min-width: 0;
+      }
+      .stack { display: grid; gap: 12px; }
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      input, select, textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: white;
+        color: var(--text);
+      }
+      textarea { min-height: 96px; resize: vertical; }
+      .controls {
+        display: grid;
+        gap: 10px;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+      }
+      .metric {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        background: var(--panel-alt);
+      }
+      .metric .label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .metric .value {
+        margin-top: 6px;
+        font-size: 24px;
+        font-weight: 700;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        overflow: hidden;
+      }
+      th, td {
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        padding: 10px 8px;
+        vertical-align: top;
+      }
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      tbody tr:hover { background: rgba(37, 99, 235, 0.04); }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 14px;
+        background: var(--panel-alt);
+      }
+      .card h3 { margin: 0 0 6px; font-size: 15px; }
+      .card p { margin: 0; color: var(--muted); font-size: 13px; }
+      .muted { color: var(--muted); }
+      .banner {
+        border-left: 4px solid var(--accent);
+        background: rgba(180, 83, 9, 0.08);
+        padding: 12px 14px;
+        border-radius: 8px;
+        color: var(--text);
+      }
+      .chat {
+        display: grid;
+        gap: 12px;
+      }
+      .message {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        background: white;
+      }
+      .message.user { border-left: 4px solid var(--secondary); }
+      .message.assistant { border-left: 4px solid var(--primary); }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .small { font-size: 12px; color: var(--muted); }
+      .hidden { display: none !important; }
+      @media (max-width: 960px) {
+        main { grid-template-columns: 1fr; }
+        aside { position: static; }
+        header { align-items: flex-start; flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <h1 id="brandName">Care Gap Navigator</h1>
+        <p id="brandTagline">Loading configuration</p>
+      </div>
+      <nav id="nav"></nav>
+    </header>
+    <main>
+      <aside class="stack">
+        <div class="controls" id="filterControls"></div>
+        <div class="banner small" id="statusBox">Loading API status</div>
+      </aside>
+      <section class="panel">
+        <div id="content"></div>
+      </section>
+    </main>
+    <script>
+      const state = {
+        route: location.hash.replace(/^#\/?/, "") || "home",
+        config: {
+          brand: null,
+          domains: [],
+          capabilities: [],
+          states: [],
+          indicators: [],
+        },
+        filters: {
+          capability: "",
+          state: "",
+          h3_resolution: 7,
+          confidence_min: 0.0,
+          indicator: "",
+          h3_cell: "",
+        },
+        genieConversationId: "",
+        genieHistory: [],
+      };
+
+      const navItems = [
+        ["home", "Home"],
+        ["care-gaps", "Care Gaps"],
+        ["genie", "Genie"],
+        ["action-center", "Action Center"],
+        ["performance", "Performance"],
+        ["scenarios", "Scenarios"],
+      ];
+
+      const el = (id) => document.getElementById(id);
+      const escapeHtml = (value) => String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+      const queryString = (values) => {
+        const params = new URLSearchParams();
+        Object.entries(values || {}).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== "") {
+            params.set(key, value);
+          }
+        });
+        return params.toString();
+      };
+      const fmt = (value, digits = 2) => {
+        if (value === null || value === undefined || Number.isNaN(value)) return "";
+        if (typeof value === "number") return value.toFixed(digits).replace(/\.00$/, "");
+        return value;
+      };
+      const loadJson = (key, fallback) => {
+        try {
+          const raw = localStorage.getItem(key);
+          return raw ? JSON.parse(raw) : fallback;
+        } catch {
+          return fallback;
+        }
+      };
+      const saveJson = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+
+      async function api(path, options = {}) {
+        const response = await fetch(path, {
+          headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+          ...options,
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || response.statusText);
+        }
+        return response.json();
+      }
+
+      function renderNav() {
+        el("nav").innerHTML = navItems.map(([route, label]) => `
+          <button class="${route === state.route ? "active" : ""}" data-route="${route}">${label}</button>
+        `).join("");
+        el("nav").querySelectorAll("button").forEach((button) => {
+          button.addEventListener("click", () => navigate(button.dataset.route));
+        });
+      }
+
+      function renderFilters() {
+        const capabilityOptions = state.config.capabilities.map(
+          (cap) => `<option value="${escapeHtml(cap)}" ${cap === state.filters.capability ? "selected" : ""}>${escapeHtml(cap)}</option>`
+        ).join("");
+        const stateOptions = state.config.states.map(
+          (value) => `<option value="${escapeHtml(value)}" ${value === state.filters.state ? "selected" : ""}>${escapeHtml(value)}</option>`
+        ).join("");
+        const indicatorOptions = state.config.indicators.map(
+          (indicator) => `<option value="${escapeHtml(indicator.column)}" ${indicator.column === state.filters.indicator ? "selected" : ""}>${escapeHtml(indicator.label)}</option>`
+        ).join("");
+
+        el("filterControls").innerHTML = `
+          <label>Capability
+            <select id="fCapability">
+              <option value="">Select capability</option>
+              ${capabilityOptions}
+            </select>
+          </label>
+          <label>State
+            <select id="fState">
+              <option value="">All India</option>
+              ${stateOptions}
+            </select>
+          </label>
+          <label>H3 resolution
+            <input id="fResolution" type="number" min="1" max="15" step="1" value="${state.filters.h3_resolution}" />
+          </label>
+          <label>Confidence minimum
+            <input id="fConfidence" type="number" min="0" max="1" step="0.05" value="${state.filters.confidence_min}" />
+          </label>
+          <label>Indicator
+            <select id="fIndicator">
+              <option value="">Select indicator</option>
+              ${indicatorOptions}
+            </select>
+          </label>
+          <label>H3 cell
+            <input id="fCell" type="text" value="${escapeHtml(state.filters.h3_cell)}" placeholder="optional" />
+          </label>
+        `;
+        ["fCapability", "fState", "fResolution", "fConfidence", "fIndicator", "fCell"].forEach((id) => {
+          const input = el(id);
+          input.addEventListener("change", () => {
+            state.filters.capability = el("fCapability").value;
+            state.filters.state = el("fState").value;
+            state.filters.h3_resolution = Number(el("fResolution").value || 7);
+            state.filters.confidence_min = Number(el("fConfidence").value || 0);
+            state.filters.indicator = el("fIndicator").value;
+            state.filters.h3_cell = el("fCell").value.trim();
+            saveJson("caregap-filters", state.filters);
+            render();
+          });
+        });
+      }
+
+      function renderMetrics(values) {
+        return `
+          <div class="metrics">
+            ${values.map(([label, value]) => `
+              <div class="metric">
+                <div class="label">${escapeHtml(label)}</div>
+                <div class="value">${escapeHtml(value)}</div>
+              </div>
+            `).join("")}
+          </div>
+        `;
+      }
+
+      function renderTable(rows, emptyLabel = "No data") {
+        if (!rows || !rows.length) {
+          return `<p class="muted">${escapeHtml(emptyLabel)}</p>`;
+        }
+        const columns = Object.keys(rows[0]);
+        return `
+          <table>
+            <thead><tr>${columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("")}</tr></thead>
+            <tbody>
+              ${rows.map((row) => `
+                <tr>${columns.map((column) => `<td>${escapeHtml(row[column])}</td>`).join("")}</tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+      }
+
+      function routeTitle() {
+        return {
+          home: "Home",
+          "care-gaps": "Care Gap Navigator",
+          genie: "Genie",
+          "action-center": "Action Center",
+          performance: "Performance",
+          scenarios: "Scenarios",
+        }[state.route] || "Home";
+      }
+
+      function renderHome() {
+        const brand = state.config.brand || {};
+        const domains = state.config.domains || [];
+        el("content").innerHTML = `
+          <div class="stack">
+            <div>
+              <h2>Home</h2>
+              <p class="muted">${escapeHtml(brand.tagline || "Browse planning domains, care gaps, Genie, performance, and collaboration tools.")}</p>
+            </div>
+            <div class="cards">
+              ${domains.map((domain) => `
+                <div class="card">
+                  <h3>${escapeHtml(domain.name)}</h3>
+                  <p>${escapeHtml(domain.blurb)}</p>
+                  <p class="small">${escapeHtml((domain.capabilities || []).join(", "))}</p>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }
+
+      async function renderCareGaps() {
+        const params = {
+          capability: state.filters.capability || state.config.capabilities[0] || "",
+          state: state.filters.state || undefined,
+          h3_resolution: state.filters.h3_resolution,
+          confidence_min: state.filters.confidence_min,
+        };
+        if (!state.filters.capability) {
+          el("content").innerHTML = `<p class="muted">Select a capability to load care-gap data.</p>`;
+          return;
+        }
+        const [kpis, h3scores, stateRollup, districtRollup] = await Promise.all([
+          api(`/api/care-gaps/kpis?${queryString(params)}`),
+          api(`/api/care-gaps/h3-scores?${queryString(params)}`),
+          api(`/api/care-gaps/rollup/state?${queryString({ capability: params.capability })}`),
+          api(`/api/care-gaps/rollup/district?${queryString({ capability: params.capability, state: params.state })}`),
+        ]);
+
+        const facilities = state.filters.h3_cell
+          ? await api(`/api/facilities/locations?${queryString({
+              capability: params.capability,
+              state: params.state,
+              h3_cell: state.filters.h3_cell,
+              h3_resolution: state.filters.h3_resolution,
+            })}`)
+          : [];
+
+        const nfhs = state.filters.indicator
+          ? await api(`/api/care-gaps/nfhs5?${queryString({
+              indicator: state.filters.indicator,
+              state: params.state,
+            })}`)
+          : [];
+
+        el("content").innerHTML = `
+          <div class="stack">
+            <div>
+              <h2>Care Gap Navigator</h2>
+              <p class="muted">Capability ${escapeHtml(params.capability)} ${params.state ? `in ${escapeHtml(params.state)}` : ""}.</p>
+            </div>
+            ${renderMetrics([
+              ["Cells", kpis.n_cells],
+              ["Facilities", kpis.n_facilities],
+              ["Average score", fmt(kpis.avg_score)],
+              ["Average confidence", fmt(kpis.avg_confidence)],
+              ["Data deficient", kpis.n_data_deficient],
+              ["Care gap", kpis.n_care_gap],
+              ["Covered", kpis.n_covered],
+            ])}
+            <div class="grid">
+              <h3>H3 scores</h3>
+              ${renderTable(h3scores, "No H3 rows returned")}
+            </div>
+            <div class="grid">
+              <h3>State rollup</h3>
+              ${renderTable(stateRollup, "No state rollup rows")}
+            </div>
+            <div class="grid">
+              <h3>District rollup</h3>
+              ${renderTable(districtRollup, "No district rollup rows")}
+            </div>
+            <div class="grid">
+              <h3>Selected cell facilities</h3>
+              ${renderTable(facilities, "Select an H3 cell to inspect facilities")}
+            </div>
+            <div class="grid">
+              <h3>NFHS-5 indicator</h3>
+              ${renderTable(nfhs, "Select an indicator to load NFHS data")}
+            </div>
+          </div>
+        `;
+      }
+
+      async function renderGenie() {
+        const status = await api("/api/genie/status");
+        if (!state.genieHistory.length) {
+          state.genieHistory = loadJson("genie-history", []);
+        }
+        const inputId = "geniePrompt";
+        el("content").innerHTML = `
+          <div class="stack">
+            <div>
+              <h2>Genie</h2>
+              <p class="muted">${status.configured ? `Conversation space ${escapeHtml(status.space_id)} is configured.` : "Genie is not configured."}</p>
+            </div>
+            <div class="chat" id="chatLog">
+              ${state.genieHistory.map((item) => `
+                <div class="message ${item.role}">
+                  <div class="small">${escapeHtml(item.role)}</div>
+                  <div>${escapeHtml(item.text)}</div>
+                  ${item.rows ? `<div class="grid">${renderTable(item.rows, "No rows")}</div>` : ""}
+                </div>
+              `).join("")}
+            </div>
+            <div class="form-row">
+              <label>Question
+                <textarea id="${inputId}" placeholder="Ask about care gaps, facilities, or performance"></textarea>
+              </label>
+              <button class="primary" id="sendGenie">Send</button>
+            </div>
+          </div>
+        `;
+        el("sendGenie").addEventListener("click", async () => {
+          const question = el(inputId).value.trim();
+          if (!question) return;
+          state.genieHistory.push({ role: "user", text: question });
+          saveJson("genie-history", state.genieHistory);
+          render();
+          const response = await api("/api/genie/ask", {
+            method: "POST",
+            body: JSON.stringify({
+              question,
+              conversation_id: state.genieConversationId || null,
+            }),
+          });
+          state.genieConversationId = response.conversation_id;
+          state.genieHistory.push({
+            role: "assistant",
+            text: response.text || "(no text)",
+            rows: response.rows || [],
+          });
+          saveJson("genie-history", state.genieHistory);
+          render();
+        });
+      }
+
+      async function renderActionCenter() {
+        const [overrides, categorizations] = await Promise.all([
+          api("/api/overrides"),
+          api("/api/gap-categorizations"),
+        ]);
+        el("content").innerHTML = `
+          <div class="stack">
+            <div>
+              <h2>Action Center</h2>
+              <p class="muted">Log overrides and root-cause categorizations.</p>
+            </div>
+            <div class="grid">
+              <h3>Create override</h3>
+              <div class="grid" id="overrideForm">
+                <input id="overrideFacility" placeholder="Facility ID" />
+                <input id="overrideCapability" placeholder="Capability" />
+                <textarea id="overrideNote" placeholder="Note"></textarea>
+                <button class="primary" id="submitOverride">Save override</button>
+              </div>
+            </div>
+            <div class="grid">
+              <h3>Create categorization</h3>
+              <div class="grid" id="categorizationForm">
+                <input id="catCapability" placeholder="Capability" />
+                <select id="catCategory">
+                  <option value="data">Data gap</option>
+                  <option value="service">Service delivery gap</option>
+                  <option value="engagement">Engagement gap</option>
+                </select>
+                <input id="catState" placeholder="State" />
+                <input id="catDistrict" placeholder="District" />
+                <input id="catCell" placeholder="H3 cell" />
+                <select id="catSeverity">
+                  <option value="">Severity</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+                <textarea id="catNote" placeholder="Note"></textarea>
+                <button class="primary" id="submitCategorization">Save categorization</button>
+              </div>
+            </div>
+            <div class="grid">
+              <h3>Recent overrides</h3>
+              ${renderTable(overrides, "No overrides yet")}
+            </div>
+            <div class="grid">
+              <h3>Recent categorizations</h3>
+              ${renderTable(categorizations, "No categorizations yet")}
+            </div>
+          </div>
+        `;
+        el("submitOverride").addEventListener("click", async () => {
+          await api("/api/overrides", {
+            method: "POST",
+            body: JSON.stringify({
+              facility_id: el("overrideFacility").value.trim(),
+              capability: el("overrideCapability").value.trim(),
+              note: el("overrideNote").value.trim(),
+            }),
+          });
+          render();
+        });
+        el("submitCategorization").addEventListener("click", async () => {
+          await api("/api/gap-categorizations", {
+            method: "POST",
+            body: JSON.stringify({
+              capability: el("catCapability").value.trim(),
+              category: el("catCategory").value,
+              state: el("catState").value.trim() || null,
+              district: el("catDistrict").value.trim() || null,
+              h3_cell: el("catCell").value.trim() || null,
+              severity: el("catSeverity").value || null,
+              note: el("catNote").value.trim() || null,
+            }),
+          });
+          render();
+        });
+      }
+
+      async function renderPerformance() {
+        if (!state.filters.capability) {
+          el("content").innerHTML = `<p class="muted">Select a capability to load performance data.</p>`;
+          return;
+        }
+        const [bands, districts, history, projected] = await Promise.all([
+          api(`/api/performance/district-risk?${queryString({
+            capability: state.filters.capability,
+            state: state.filters.state,
+          })}`),
+          api(`/api/performance/districts?${queryString({
+            capability: state.filters.capability,
+            state: state.filters.state,
+          })}`),
+          api(`/api/performance/score-history?${queryString({
+            capability: state.filters.capability,
+            state: state.filters.state,
+            top_n_districts: 8,
+          })}`),
+          api(`/api/performance/projected-trend?${queryString({
+            capability: state.filters.capability,
+            state: state.filters.state,
+            top_n_districts: 8,
+            months: 12,
+          })}`),
+        ]);
+        el("content").innerHTML = `
+          <div class="stack">
+            <div>
+              <h2>Performance</h2>
+              <p class="muted">Capability ${escapeHtml(state.filters.capability)} ${state.filters.state ? `in ${escapeHtml(state.filters.state)}` : ""}.</p>
+            </div>
+            ${renderMetrics(bands.map((band) => [band.band, band.count]))}
+            <div class="grid">
+              <h3>Districts</h3>
+              ${renderTable(districts, "No districts available")}
+            </div>
+            <div class="grid">
+              <h3>Score history</h3>
+              ${renderTable(history, "No score history yet")}
+            </div>
+            <div class="grid">
+              <h3>Projected trend</h3>
+              ${renderTable(projected, "No projected trend rows")}
+            </div>
+          </div>
+        `;
+      }
+
+      async function renderScenarios() {
+        const [scenarios, bookmarks] = await Promise.all([
+          api("/api/scenarios"),
+          api("/api/bookmarks"),
+        ]);
+        el("content").innerHTML = `
+          <div class="stack">
+            <div>
+              <h2>Scenarios</h2>
+              <p class="muted">Save planning payloads and bookmark filter states.</p>
+            </div>
+            <div class="grid">
+              <h3>Create scenario</h3>
+              <input id="scenarioName" placeholder="Name" />
+              <textarea id="scenarioPayload" placeholder='{"notes":"..." }'></textarea>
+              <button class="primary" id="submitScenario">Save scenario</button>
+            </div>
+            <div class="grid">
+              <h3>Create bookmark</h3>
+              <input id="bookmarkName" placeholder="Name" />
+              <textarea id="bookmarkFilters" placeholder='{"capability":"icu"}'></textarea>
+              <label><span class="small">Shared</span> <input id="bookmarkShared" type="checkbox" /></label>
+              <button class="primary" id="submitBookmark">Save bookmark</button>
+            </div>
+            <div class="grid">
+              <h3>Scenarios</h3>
+              ${renderTable(scenarios, "No scenarios yet")}
+            </div>
+            <div class="grid">
+              <h3>Bookmarks</h3>
+              ${renderTable(bookmarks, "No bookmarks yet")}
+            </div>
+          </div>
+        `;
+        el("submitScenario").addEventListener("click", async () => {
+          await api("/api/scenarios", {
+            method: "POST",
+            body: JSON.stringify({
+              name: el("scenarioName").value.trim(),
+              payload: JSON.parse(el("scenarioPayload").value || "{}"),
+            }),
+          });
+          render();
+        });
+        el("submitBookmark").addEventListener("click", async () => {
+          await api("/api/bookmarks", {
+            method: "POST",
+            body: JSON.stringify({
+              name: el("bookmarkName").value.trim(),
+              filters: JSON.parse(el("bookmarkFilters").value || "{}"),
+              shared: el("bookmarkShared").checked,
+            }),
+          });
+          render();
+        });
+      }
+
+      async function render() {
+        renderNav();
+        renderFilters();
+        el("statusBox").textContent = `Route ${routeTitle()}`;
+        try {
+          if (state.route === "home") renderHome();
+          if (state.route === "care-gaps") await renderCareGaps();
+          if (state.route === "genie") await renderGenie();
+          if (state.route === "action-center") await renderActionCenter();
+          if (state.route === "performance") await renderPerformance();
+          if (state.route === "scenarios") await renderScenarios();
+        } catch (error) {
+          el("content").innerHTML = `<div class="banner">Request failed: ${escapeHtml(error.message || error)}</div>`;
+        }
+      }
+
+      async function loadConfig() {
+        const [brand, domains, capabilities, states, indicators, status] = await Promise.all([
+          api("/api/config/brand"),
+          api("/api/config/domains"),
+          api("/api/config/capabilities"),
+          api("/api/config/states"),
+          api("/api/config/indicators"),
+          api("/api/status"),
+        ]);
+        state.config = { brand, domains, capabilities, states, indicators };
+        state.filters = {
+          ...state.filters,
+          ...loadJson("caregap-filters", {}),
+          capability: loadJson("caregap-filters", {}).capability || capabilities[0] || "",
+        };
+        el("brandName").textContent = brand.name;
+        el("brandTagline").textContent = brand.tagline || brand.sponsor || "FastAPI-backed planning app";
+        document.documentElement.style.setProperty("--primary", brand.primary || "#0f766e");
+        document.documentElement.style.setProperty("--secondary", brand.secondary || "#2563eb");
+        document.documentElement.style.setProperty("--accent", brand.accent || "#b45309");
+        el("statusBox").textContent = `${status.status}; SQL ${status.sql_configured ? "ready" : "not configured"}; Genie ${status.genie_configured ? "ready" : "not configured"}`;
+      }
+
+      function navigate(route) {
+        state.route = route;
+        location.hash = `/${route}`;
+        render();
+      }
+
+      window.addEventListener("hashchange", () => {
+        state.route = location.hash.replace(/^#\/?/, "") || "home";
+        render();
+      });
+
+      (async () => {
+        await loadConfig();
+        render();
+      })();
+    </script>
+  </body>
+</html>

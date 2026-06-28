@@ -13,9 +13,9 @@ import json
 
 import pandas as pd
 
-from ._shared_config import fq_schema
+from app.core.sql_client import execute, query_df
 
-from .sql_client import execute, query_df
+from ._shared_config import fq_schema
 
 LAKEBASE = fq_schema("lakebase")
 

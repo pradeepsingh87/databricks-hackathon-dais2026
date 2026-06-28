@@ -38,13 +38,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path.cwd().parents[1]))
 
 # COMMAND ----------
-from pyspark.sql import functions as F  # noqa: E402
-from pyspark.sql.window import Window   # noqa: E402
-
-from pipelines.common.config import fq_schema, get_catalog  # noqa: E402
-
 # COMMAND ----------
 import yaml  # noqa: E402
+from pyspark.sql import functions as F  # noqa: E402
+from pyspark.sql.window import Window  # noqa: E402
+
+from pipelines.common.config import fq_schema, get_catalog  # noqa: E402
 
 CATALOG = get_catalog()
 SILVER = fq_schema("silver", CATALOG)

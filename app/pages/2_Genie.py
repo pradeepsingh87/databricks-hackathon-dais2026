@@ -16,7 +16,6 @@ if str(_APP_ROOT) not in sys.path:
 import os  # noqa: E402
 
 import streamlit as st  # noqa: E402
-
 from components.filters import render_sidebar  # noqa: E402
 from services import brand, genie  # noqa: E402
 

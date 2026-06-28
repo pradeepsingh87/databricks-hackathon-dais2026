@@ -1,4 +1,7 @@
 streamlit>=1.32
+fastapi
+uvicorn[standard]
+cachetools
 pydeck>=0.9
 databricks-sdk>=0.30
 databricks-sql-connector>=3.0

@@ -19,7 +19,6 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
-
 _EVIDENCE_COLOR = {
     "strong":     ( 26, 152,  80, 220),   # green
     "partial":    (252, 141,  89, 220),   # amber

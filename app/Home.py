@@ -13,7 +13,6 @@ if str(_APP_ROOT) not in sys.path:
     sys.path.insert(0, str(_APP_ROOT))
 
 import streamlit as st  # noqa: E402
-
 from services import brand  # noqa: E402
 
 st.set_page_config(

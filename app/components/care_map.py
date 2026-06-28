@@ -20,7 +20,6 @@ import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
-
 # RdYlGn diverging palette (6 stops). Score ∈ [0, 1] → index ∈ [0, 5].
 _SCORE_PALETTE = [
     (215,  48,  39),   # 0.00–0.16  hard gap

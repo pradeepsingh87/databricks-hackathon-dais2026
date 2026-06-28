@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import pandas as pd
 
-from ._shared_config import CAPABILITIES, fq_schema
+from app.core.sql_client import query_df
 
-from .sql_client import query_df
+from ._shared_config import CAPABILITIES, fq_schema
 
 SILVER = fq_schema("silver")
 GOLD = fq_schema("gold")

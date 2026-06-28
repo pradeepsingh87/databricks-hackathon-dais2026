@@ -193,7 +193,7 @@ def fetch_rows(answer: GenieAnswer, limit: int = 1000) -> pd.DataFrame:
     re-run the SQL via the SQL Statements API on our existing warehouse —
     that means we don't depend on Genie keeping the result hot.
     """
-    from .sql_client import query_df
+    from app.core.sql_client import query_df
 
     if not answer.sql:
         return pd.DataFrame()
