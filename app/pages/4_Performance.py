@@ -22,13 +22,11 @@ _APP_ROOT = Path(__file__).resolve().parents[1]
 if str(_APP_ROOT) not in sys.path:
     sys.path.insert(0, str(_APP_ROOT))
 
-import math  # noqa: E402
-
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
-
 from components.filters import render_sidebar  # noqa: E402
 from services import brand, gold  # noqa: E402
+from services.performance import projected_trend, risk_band  # noqa: E402
 
 st.set_page_config(
     page_title=f"Performance · {brand.load_brand().name}",
@@ -54,16 +52,8 @@ if districts.empty:
     st.stop()
 
 # ---- Risk bands ---------------------------------------------------------
-def _band(score: float) -> str:
-    if pd.isna(score): return "Unknown"
-    if score < 0.25:   return "Critical"
-    if score < 0.50:   return "At-risk"
-    if score < 0.75:   return "Adequate"
-    return "Well-served"
-
-
 districts = districts.copy()
-districts["risk"] = districts["score"].apply(_band)
+districts["risk"] = districts["score"].apply(risk_band)
 counts = districts["risk"].value_counts()
 
 st.markdown("#### Risk stratification")
@@ -132,25 +122,7 @@ else:
         "(every Gold ETL run appends one)."
     )
 
-    MONTHS = 12
-
-    def _project_series(current_score: float, months: int = MONTHS) -> list[float]:
-        """Deterministic monotonic improvement (no randomness)."""
-        if pd.isna(current_score):
-            return [float("nan")] * months
-        s = float(current_score)
-        ceiling = min(0.95, max(s + 0.4, 0.6))
-        return [
-            round(s + (ceiling - s) * (1 - math.exp(-i / 4.0)), 3)
-            for i in range(months)
-        ]
-
-    worst = ranked.dropna(subset=["score"]).head(WORST_N)
-    trend_rows = []
-    for _, r in worst.iterrows():
-        for m, v in enumerate(_project_series(float(r["score"]))):
-            trend_rows.append({"district": r["district"], "month": m, "score": v})
-    trend_df = pd.DataFrame(trend_rows)
+    trend_df = pd.DataFrame(projected_trend(ranked, top_n_districts=WORST_N, months=12))
 
     if not trend_df.empty:
         pivot = trend_df.pivot(index="month", columns="district", values="score")

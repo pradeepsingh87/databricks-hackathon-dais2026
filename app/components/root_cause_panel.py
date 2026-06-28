@@ -21,15 +21,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import streamlit as st
-
 from services import lakebase
 from services.user import current_user
 
 CATEGORIES: list[tuple[str, str, str]] = [
     # (db value, display label, one-line explanation)
-    ("data",       "🔍 Data Gap",         "We can't tell if care exists. Evidence is thin or stale."),
-    ("service",    "🏥 Service Delivery", "Care is claimed but evidence suggests delivery is weak."),
-    ("engagement", "📣 Engagement",       "Care exists; populations aren't reaching it (low utilisation)."),
+    ("data",       "🔍 Data Gap",
+     "We can't tell if care exists. Evidence is thin or stale."),
+    ("service",    "🏥 Service Delivery",
+     "Care is claimed but evidence suggests delivery is weak."),
+    ("engagement", "📣 Engagement",
+     "Care exists; populations aren't reaching it (low utilisation)."),
 ]
 SEVERITIES = ["low", "medium", "high"]
 

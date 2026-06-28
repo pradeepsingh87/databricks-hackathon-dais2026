@@ -10,7 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import streamlit as st
-
 from services import gold
 from services.domains import load_domains
 
@@ -66,13 +65,18 @@ def render_sidebar() -> Filters:
     domain_choice = st.sidebar.selectbox(
         "Domain",
         domain_options,
-        format_func=lambda d: "All capabilities" if d == "All capabilities" else domain_labels.get(d, d),
+        format_func=lambda d: (
+            "All capabilities" if d == "All capabilities" else domain_labels.get(d, d)
+        ),
         key=KEYS["domain"],
         help="Bundles a set of capabilities + NFHS-5 indicators relevant to one planning lens.",
     )
 
     caps, default_indicator = _capability_choices()
-    if KEYS["capability"] not in st.session_state or st.session_state[KEYS["capability"]] not in caps:
+    if (
+        KEYS["capability"] not in st.session_state
+        or st.session_state[KEYS["capability"]] not in caps
+    ):
         st.session_state[KEYS["capability"]] = caps[0]
     capability = st.sidebar.selectbox("Capability", caps, key=KEYS["capability"])
 

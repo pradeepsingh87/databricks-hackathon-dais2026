@@ -19,7 +19,6 @@ import json  # noqa: E402
 
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
-
 from components import facility_map, root_cause_panel  # noqa: E402
 from components.filters import render_sidebar  # noqa: E402
 from services import brand, gold, lakebase  # noqa: E402
@@ -37,7 +36,7 @@ st.markdown("### Action Center")
 chip_html = (
     "<span style='font-size:13px;color:var(--brand-muted);'>"
     f"capability <b>{filters.capability}</b> · "
-    f"{'cell <b>' + filters.h3_cell + '</b>' if filters.h3_cell else 'state <b>' + (filters.state or 'All India') + '</b>'}"
+    f"{'cell <b>' + filters.h3_cell + '</b>' if filters.h3_cell else 'state <b>' + (filters.state or 'All India') + '</b>'}"  # noqa: E501
     "</span>"
 )
 st.markdown(chip_html, unsafe_allow_html=True)
@@ -193,7 +192,7 @@ for _, row in df.iterrows():
                 )
                 note = st.text_area(
                     "Note",
-                    placeholder="e.g. 'Verified via phone call — no functioning oxygen concentrators'",
+                    placeholder="e.g. 'Verified via phone — no functioning oxygen concentrators'",
                     label_visibility="collapsed",
                 )
                 if st.form_submit_button("Save", use_container_width=True, type="primary"):
