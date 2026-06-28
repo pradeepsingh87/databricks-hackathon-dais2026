@@ -4,109 +4,152 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Care Gap Navigator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <style>
       :root {
-        --bg: #f4f8fb;
-        --panel: #ffffff;
-        --panel-alt: #eef4f8;
-        --text: #173042;
-        --muted: #5f7382;
-        --border: #d8e2ea;
-        --primary: #0f766e;
-        --secondary: #2563eb;
-        --accent: #b45309;
-        --success: #15803d;
-        --danger: #b91c1c;
-        --radius: 10px;
-        --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --bg:#0a0e14; --bg2:#0e1420; --panel:#121a28; --panel2:#16202f;
+        --line:#22304a; --line2:#2d3f5e;
+        --ink:#eef3fb; --ink2:#9fb0c9; --ink3:#6b7e9c;
+        --lava:#ff3621; --lava2:#ff6a52; --amber:#ffab00;
+        --cyan:#15afdd; --blue:#2375a8; --green:#52a870; --pink:#c85070; --gold:#c89930;
+        --good:#3ddc84; --warn:#ffab00; --bad:#ff5470;
+        --r:14px; --r2:10px;
+        --shadow:0 18px 50px -20px rgba(0,0,0,.7);
       }
       * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
       body {
-        margin: 0;
-        color: var(--text);
-        background:
-          linear-gradient(180deg, rgba(15, 118, 110, 0.06), transparent 220px),
-          var(--bg);
+        background: radial-gradient(1200px 700px at 80% -10%, #16243a 0%, var(--bg) 55%) fixed, var(--bg);
+        color: var(--ink);
+        font-family: Inter, system-ui, sans-serif;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
       }
+      h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; letter-spacing: -.01em; margin: 0; }
+      a { color: var(--cyan); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      button { font-family: inherit; }
       header {
         display: flex;
         gap: 16px;
         align-items: flex-end;
         justify-content: space-between;
-        padding: 20px 24px 12px;
-        border-bottom: 1px solid var(--border);
-        background: rgba(244, 248, 251, 0.92);
+        padding: 0 24px;
+        height: 60px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(10, 14, 20, 0.82);
         position: sticky;
         top: 0;
-        backdrop-filter: blur(10px);
-        z-index: 10;
+        backdrop-filter: blur(12px);
+        z-index: 40;
+      }
+      .brand { display: flex; align-items: center; gap: 10px; }
+      .brand .dot {
+        width: 13px; height: 13px; border-radius: 3px;
+        background: var(--lava); box-shadow: 0 0 14px var(--lava);
+        flex: 0 0 auto;
       }
       .brand h1 {
         margin: 0;
-        font-size: 22px;
+        font-family: 'Space Grotesk';
+        font-size: 16px;
+        font-weight: 700;
         line-height: 1.1;
       }
-      .brand p, .status, .eyebrow {
-        margin: 4px 0 0;
-        color: var(--muted);
-        font-size: 13px;
+      .brand p {
+        margin: 0 0 0 8px;
+        color: var(--ink3);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: .14em;
+        text-transform: uppercase;
       }
       nav {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
       }
-      nav button, .controls button, .form-row button {
-        border: 1px solid var(--border);
-        background: var(--panel);
-        color: var(--text);
+      nav button, .controls button,       .form-row {
+        display: flex;
+        gap: 10px;
+        align-items: end;
+      }
+      .form-row label { flex: 1; }
+      .form-row button {
+        border: 1px solid var(--line2);
+        background: transparent;
+        color: var(--ink2);
         border-radius: 999px;
-        padding: 8px 12px;
+        padding: 7px 15px;
+        font-size: 13px;
         cursor: pointer;
+        transition: .15s;
+        white-space: nowrap;
       }
-      nav button.active, .controls button.primary, .form-row button.primary {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
+      nav button:hover, .controls button:hover, .form-row button:hover {
+        border-color: var(--lava);
+        color: var(--ink);
+      }
+      nav button.active {
+        background: transparent;
+        border-color: var(--lava);
+        color: var(--ink);
+      }
+      .controls button.primary, .form-row button.primary {
+        border-color: var(--lava);
+        color: var(--lava);
+      }
+      .controls button.primary:hover, .form-row button.primary:hover {
+        background: rgba(255, 54, 33, .12);
+        color: var(--lava2);
       }
       main {
         display: grid;
         grid-template-columns: 290px minmax(0, 1fr);
         gap: 18px;
-        padding: 18px 24px 28px;
+        padding: 18px 24px 32px;
         align-items: start;
       }
       aside, section.panel {
         background: var(--panel);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
+        border: 1px solid var(--line);
+        border-radius: var(--r);
         box-shadow: var(--shadow);
       }
       aside {
         padding: 14px;
         position: sticky;
-        top: 96px;
+        top: 84px;
       }
       section.panel {
-        padding: 16px;
+        padding: 18px;
         min-width: 0;
       }
-      .stack { display: grid; gap: 12px; }
+      .stack { display: grid; gap: 14px; }
       label {
         display: grid;
         gap: 6px;
-        font-size: 13px;
-        color: var(--muted);
+        font-size: 12.5px;
+        color: var(--ink2);
       }
       input, select, textarea {
         width: 100%;
-        border: 1px solid var(--border);
-        border-radius: 8px;
+        border: 1px solid var(--line);
+        border-radius: var(--r2);
         padding: 10px 12px;
-        background: white;
-        color: var(--text);
+        background: var(--bg2);
+        color: var(--ink);
+        font-family: Inter, system-ui, sans-serif;
+        font-size: 13px;
       }
+      input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--cyan);
+        box-shadow: 0 0 0 2px rgba(21, 175, 221, .2);
+      }
+      select { cursor: pointer; }
       textarea { min-height: 96px; resize: vertical; }
       .controls {
         display: grid;
@@ -122,21 +165,27 @@
         gap: 12px;
       }
       .metric {
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 12px;
-        background: var(--panel-alt);
+        border: 1px solid var(--line);
+        border-radius: var(--r2);
+        padding: 13px 14px;
+        background: var(--bg2);
       }
       .metric .label {
-        color: var(--muted);
-        font-size: 12px;
+        color: var(--ink3);
+        font-size: 11.5px;
         text-transform: uppercase;
         letter-spacing: 0.04em;
+        line-height: 1.35;
       }
       .metric .value {
         margin-top: 6px;
-        font-size: 24px;
+        font-family: 'Space Grotesk';
+        font-size: 23px;
         font-weight: 700;
+        background: linear-gradient(100deg, var(--lava2), var(--amber));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
       }
       table {
         width: 100%;
@@ -145,51 +194,54 @@
         overflow: hidden;
       }
       th, td {
-        border-bottom: 1px solid var(--border);
+        border-bottom: 1px solid var(--line);
         text-align: left;
         padding: 10px 8px;
         vertical-align: top;
       }
       th {
-        color: var(--muted);
-        font-size: 12px;
+        color: var(--ink3);
+        font-size: 11.5px;
         text-transform: uppercase;
         letter-spacing: 0.04em;
       }
-      tbody tr:hover { background: rgba(37, 99, 235, 0.04); }
+      tbody tr:hover { background: rgba(21, 175, 221, 0.06); }
       .cards {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 12px;
       }
       .card {
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 14px;
-        background: var(--panel-alt);
+        border: 1px solid var(--line);
+        border-radius: var(--r2);
+        padding: 14px 16px;
+        background: var(--bg2);
       }
-      .card h3 { margin: 0 0 6px; font-size: 15px; }
-      .card p { margin: 0; color: var(--muted); font-size: 13px; }
-      .muted { color: var(--muted); }
+      .card h3 { margin: 0 0 5px; font-size: 14px; font-family: 'Space Grotesk'; color: var(--ink); }
+      .card p { margin: 0; color: var(--ink2); font-size: 13px; line-height: 1.5; }
+      .muted { color: var(--ink2); }
       .banner {
-        border-left: 4px solid var(--accent);
-        background: rgba(180, 83, 9, 0.08);
+        border-left: 4px solid var(--amber);
+        background: rgba(255, 171, 0, .08);
         padding: 12px 14px;
-        border-radius: 8px;
-        color: var(--text);
+        border-radius: var(--r2);
+        color: var(--ink2);
+        font-size: 12px;
+        line-height: 1.4;
       }
       .chat {
         display: grid;
         gap: 12px;
       }
       .message {
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 12px;
-        background: white;
+        border: 1px solid var(--line);
+        border-radius: var(--r2);
+        padding: 12px 14px;
+        background: var(--bg2);
+        line-height: 1.5;
       }
-      .message.user { border-left: 4px solid var(--secondary); }
-      .message.assistant { border-left: 4px solid var(--primary); }
+      .message.user { border-left: 4px solid var(--cyan); }
+      .message.assistant { border-left: 4px solid var(--lava); }
       .toolbar {
         display: flex;
         flex-wrap: wrap;
@@ -197,18 +249,31 @@
         align-items: center;
         margin-bottom: 12px;
       }
-      .small { font-size: 12px; color: var(--muted); }
+      .small { font-size: 12px; color: var(--ink3); }
       .hidden { display: none !important; }
+      section.panel h2 {
+        font-family: 'Space Grotesk';
+        font-size: 22px;
+        margin-bottom: 6px;
+      }
+      section.panel h3 {
+        font-size: 15px;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
       @media (max-width: 960px) {
         main { grid-template-columns: 1fr; }
         aside { position: static; }
-        header { align-items: flex-start; flex-direction: column; }
+        header { align-items: flex-start; flex-direction: column; height: auto; padding: 12px 24px; gap: 8px; }
       }
     </style>
   </head>
   <body>
     <header>
       <div class="brand">
+        <span class="dot"></span>
         <h1 id="brandName">Care Gap Navigator</h1>
         <p id="brandTagline">Loading configuration</p>
       </div>
