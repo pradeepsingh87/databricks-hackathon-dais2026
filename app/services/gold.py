@@ -36,6 +36,18 @@ def list_capabilities() -> list[str]:
     return CAPABILITIES
 
 
+FALLBACK_STATES = [
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh",
+    "Chhattisgarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi",
+    "Goa", "Gujarat", "Haryana", "Himachal Pradesh",
+    "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala",
+    "Ladakh", "Lakshadweep", "Madhya Pradesh", "Maharashtra", "Manipur",
+    "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Puducherry",
+    "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
+    "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+]
+
+
 def list_states() -> list[str]:
     """Canonicalized India state/UT list (~36 rows).
 
@@ -48,16 +60,22 @@ def list_states() -> list[str]:
     NOTE: ORDER BY references the projected alias `state`, not the original
     column. After `SELECT DISTINCT … AS state`, Spark only resolves columns
     in the projection; ordering by `canonical_state` raises UNRESOLVED_COLUMN.
+
+    Falls back to FALLBACK_STATES when the database table is not available
+    (e.g. local development or before the bronze layer is deployed).
     """
-    df = query_df(
-        f"""
-        SELECT DISTINCT canonical_state AS state
-        FROM {fq_schema('bronze')}.state_alias_reference
-        WHERE canonical_state IS NOT NULL
-        ORDER BY state
-        """
-    )
-    return df["state"].tolist() if not df.empty else []
+    try:
+        df = query_df(
+            f"""
+            SELECT DISTINCT canonical_state AS state
+            FROM {fq_schema('bronze')}.state_alias_reference
+            WHERE canonical_state IS NOT NULL
+            ORDER BY state
+            """
+        )
+        return df["state"].tolist() if not df.empty else FALLBACK_STATES
+    except Exception:
+        return FALLBACK_STATES
 
 
 def fetch_h3_scores(capability: str, resolution: int = 7, state: str | None = None) -> pd.DataFrame:
